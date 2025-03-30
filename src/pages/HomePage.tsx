@@ -1,6 +1,7 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, ShoppingCart, Bell, Filter, ChevronRight, Home, History, MessageSquare, User } from 'lucide-react';
+import { Search, ShoppingCart, Bell, Filter, ChevronRight, Home, History, MessageSquare, User, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
@@ -15,7 +16,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { CategoryIcon } from '@/components/CategoryIcon';
 import { FoodRecommendationCard } from '@/components/FoodRecommendationCard';
 
-const Home = () => {
+const HomePage = () => {
   const { menuItems, isLoading } = useApp();
   const navigate = useNavigate();
   const [showLoader, setShowLoader] = useState(true);
@@ -212,7 +213,7 @@ const Home = () => {
                   <CardContent className="pt-6">
                     <div className="flex flex-col items-center text-center">
                       <div className="p-3 rounded-full bg-curry-100 text-curry-600 mb-4">
-                        <Wallet className="h-8 w-8" />
+                        <ShoppingCart className="h-8 w-8" />
                       </div>
                       <h3 className="text-xl font-semibold mb-2">Cashless Payments</h3>
                       <p className="text-gray-600">
@@ -227,7 +228,7 @@ const Home = () => {
                   <CardContent className="pt-6">
                     <div className="flex flex-col items-center text-center">
                       <div className="p-3 rounded-full bg-spice-100 text-spice-600 mb-4">
-                        <UserCheck className="h-8 w-8" />
+                        <User className="h-8 w-8" />
                       </div>
                       <h3 className="text-xl font-semibold mb-2">Personalized Experience</h3>
                       <p className="text-gray-600">
@@ -296,4 +297,4 @@ const Home = () => {
   );
 };
 
-export default Home;
+export default HomePage;

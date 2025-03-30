@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -9,7 +8,7 @@ import { AnimatePresence } from "framer-motion";
 import { ChatBot } from "@/components/ChatBot";
 
 // Pages
-import Index from "./pages/Index";
+import HomePage from "./pages/HomePage";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Menu from "./pages/Menu";
@@ -22,7 +21,7 @@ import StaffOrders from "./pages/StaffOrders";
 import StaffBilling from "./pages/StaffBilling";
 import MenuManagement from "./pages/MenuManagement";
 import AdminDashboard from "./pages/Admin/Dashboard";
-import AdminLogin from "./pages/AdminLogin"; // Fix the import path
+import AdminLogin from "./pages/AdminLogin"; 
 import Scanner from "./pages/Scanner";
 import NotFound from "./pages/NotFound";
 
@@ -43,7 +42,7 @@ const App = () => (
           <AnimatePresence mode="wait">
             <Routes>
               {/* Public Routes */}
-              <Route path="/" element={<Index />} />
+              <Route path="/" element={<HomePage />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               <Route path="/menu" element={<Menu />} />

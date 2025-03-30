@@ -1,4 +1,3 @@
-
 // User types
 export type UserRole = 'student' | 'staff' | 'cafeteria_staff' | 'admin';
 
@@ -36,6 +35,8 @@ export interface MenuItem {
   tags?: string[];
   rating?: number;
   totalOrders?: number;
+  vegetarian?: boolean; // Added this property
+  bestSeller?: boolean; // Added this property
 }
 
 // Order types
