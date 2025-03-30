@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
@@ -6,7 +7,7 @@ import { useApp } from '@/context/AppContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Lock, LogIn, User, KeyRound, Shield } from 'lucide-react';
+import { Lock, LogIn, User, KeyRound, Shield, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 const AdminLogin: React.FC = () => {
@@ -15,7 +16,22 @@ const AdminLogin: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { login } = useApp();
+  const { login, user } = useApp();
+  
+  // Check if already logged in as admin
+  useEffect(() => {
+    if (user && user.role === 'admin') {
+      navigate('/admin/dashboard');
+    } else if (user && user.role !== 'admin') {
+      // Redirect non-admin users
+      toast({
+        title: "Access Denied",
+        description: "This area is restricted to admin users only.",
+        variant: "destructive",
+      });
+      navigate('/');
+    }
+  }, [user, navigate, toast]);
   
   // Advanced animation variants
   const containerVariants = {
@@ -69,12 +85,10 @@ const AdminLogin: React.FC = () => {
         throw new Error('Access denied: Admin privileges required');
       }
       
-      // Fix the login function call to match the expected parameters in context
-      // Assuming it needs both email and password
       login(email, password);
       
       toast({
-        title: "Login Successful",
+        title: "Admin Login Successful",
         description: "Welcome to the admin dashboard!",
       });
       
@@ -93,7 +107,7 @@ const AdminLogin: React.FC = () => {
   };
   
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+    <div className="min-h-screen flex items-center justify-center bg-navy-50 px-4">
       <motion.div
         initial="hidden"
         animate="visible"
@@ -101,7 +115,7 @@ const AdminLogin: React.FC = () => {
         className="w-full max-w-md"
       >
         <motion.div variants={itemVariants}>
-          <Card className="border-2 border-[#15187C]/10 shadow-lg">
+          <Card className="border-2 border-navy-500/10 shadow-lg">
             <CardHeader className="space-y-2 text-center">
               <div className="flex justify-center mb-2">
                 <motion.div
@@ -113,12 +127,12 @@ const AdminLogin: React.FC = () => {
                     damping: 10,
                     delay: 0.3
                   }}
-                  className="w-16 h-16 bg-[#15187C] rounded-full flex items-center justify-center text-white"
+                  className="w-16 h-16 bg-navy-500 rounded-full flex items-center justify-center text-white"
                 >
                   <Shield className="h-8 w-8" />
                 </motion.div>
               </div>
-              <CardTitle className="text-2xl font-bold text-[#15187C]">Admin Login</CardTitle>
+              <CardTitle className="text-2xl font-bold text-navy-500">Admin Login</CardTitle>
               <CardDescription>
                 Please enter your credentials to access the admin dashboard
               </CardDescription>
@@ -127,7 +141,7 @@ const AdminLogin: React.FC = () => {
               <form onSubmit={handleLogin} className="space-y-4">
                 <motion.div variants={itemVariants} className="space-y-2">
                   <div className="flex items-center space-x-2 text-sm text-gray-600 mb-1">
-                    <User className="h-4 w-4 text-[#15187C]" />
+                    <User className="h-4 w-4 text-navy-500" />
                     <span>Email Address</span>
                   </div>
                   <div className="relative">
@@ -137,14 +151,14 @@ const AdminLogin: React.FC = () => {
                       required
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className="pl-3 border-[#15187C]/20 focus-visible:ring-[#15187C]/50"
+                      className="pl-3 border-navy-500/20 focus-visible:ring-navy-500/50"
                     />
                   </div>
                 </motion.div>
                 
                 <motion.div variants={itemVariants} className="space-y-2">
                   <div className="flex items-center space-x-2 text-sm text-gray-600 mb-1">
-                    <KeyRound className="h-4 w-4 text-[#15187C]" />
+                    <KeyRound className="h-4 w-4 text-navy-500" />
                     <span>Password</span>
                   </div>
                   <div className="relative">
@@ -154,7 +168,7 @@ const AdminLogin: React.FC = () => {
                       required
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="pl-3 border-[#15187C]/20 focus-visible:ring-[#15187C]/50"
+                      className="pl-3 border-navy-500/20 focus-visible:ring-navy-500/50"
                     />
                   </div>
                 </motion.div>
@@ -162,7 +176,7 @@ const AdminLogin: React.FC = () => {
                 <motion.div variants={itemVariants}>
                   <Button
                     type="submit"
-                    className="w-full bg-[#15187C] hover:bg-[#0e105a]"
+                    className="w-full bg-navy-500 hover:bg-navy-600 text-white"
                     disabled={isLoading}
                   >
                     {isLoading ? (
@@ -177,6 +191,16 @@ const AdminLogin: React.FC = () => {
                       </div>
                     )}
                   </Button>
+                </motion.div>
+                
+                <motion.div variants={itemVariants}>
+                  <div className="p-3 bg-amber-50 text-amber-700 rounded-md flex items-start space-x-2">
+                    <AlertTriangle className="h-5 w-5 flex-shrink-0 mt-0.5" />
+                    <div className="text-sm">
+                      <p className="font-semibold">Admin Area Only</p>
+                      <p>This login is strictly for cafeteria administrators. Regular users and staff should use the standard login.</p>
+                    </div>
+                  </div>
                 </motion.div>
               </form>
             </CardContent>
@@ -199,7 +223,7 @@ const AdminLogin: React.FC = () => {
           <Button 
             variant="ghost" 
             onClick={() => navigate('/')}
-            className="text-[#15187C]"
+            className="text-navy-500"
           >
             Back to Main Site
           </Button>

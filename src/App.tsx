@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -6,6 +7,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AppProvider } from "@/context/AppContext";
 import { AnimatePresence } from "framer-motion";
 import { ChatBot } from "@/components/ChatBot";
+import { RoleBasedRoute } from "@/components/RoleBasedRoute";
 
 // Pages
 import HomePage from "./pages/HomePage";
@@ -47,22 +49,58 @@ const App = () => (
               <Route path="/register" element={<Register />} />
               <Route path="/menu" element={<Menu />} />
               <Route path="/menu/:id" element={<ItemDetail />} />
-              <Route path="/cart" element={<Cart />} />
               
-              {/* User Routes */}
-              <Route path="/orders" element={<Orders />} />
-              <Route path="/orders/:id" element={<OrderDetail />} />
-              <Route path="/wallet" element={<Wallet />} />
-              <Route path="/scanner" element={<Scanner />} />
+              {/* User Routes (requires authentication) */}
+              <Route path="/cart" element={
+                <RoleBasedRoute allowedRoles={['student', 'staff', 'cafeteria_staff', 'admin']}>
+                  <Cart />
+                </RoleBasedRoute>
+              } />
+              <Route path="/orders" element={
+                <RoleBasedRoute allowedRoles={['student', 'staff', 'cafeteria_staff', 'admin']}>
+                  <Orders />
+                </RoleBasedRoute>
+              } />
+              <Route path="/orders/:id" element={
+                <RoleBasedRoute allowedRoles={['student', 'staff', 'cafeteria_staff', 'admin']}>
+                  <OrderDetail />
+                </RoleBasedRoute>
+              } />
+              <Route path="/wallet" element={
+                <RoleBasedRoute allowedRoles={['student', 'staff', 'cafeteria_staff', 'admin']}>
+                  <Wallet />
+                </RoleBasedRoute>
+              } />
+              <Route path="/scanner" element={
+                <RoleBasedRoute allowedRoles={['student', 'staff', 'cafeteria_staff', 'admin']}>
+                  <Scanner />
+                </RoleBasedRoute>
+              } />
               
               {/* Staff Routes */}
-              <Route path="/staff/orders" element={<StaffOrders />} />
-              <Route path="/staff/billing" element={<StaffBilling />} />
-              <Route path="/staff/menu" element={<MenuManagement />} />
+              <Route path="/staff/orders" element={
+                <RoleBasedRoute allowedRoles={['cafeteria_staff', 'admin']}>
+                  <StaffOrders />
+                </RoleBasedRoute>
+              } />
+              <Route path="/staff/billing" element={
+                <RoleBasedRoute allowedRoles={['cafeteria_staff', 'admin']}>
+                  <StaffBilling />
+                </RoleBasedRoute>
+              } />
+              <Route path="/staff/menu" element={
+                <RoleBasedRoute allowedRoles={['cafeteria_staff', 'admin']}>
+                  <MenuManagement />
+                </RoleBasedRoute>
+              } />
               
               {/* Admin Routes */}
               <Route path="/admin/login" element={<AdminLogin />} />
-              <Route path="/admin/dashboard" element={<AdminDashboard />} />
+              <Route path="/admin/dashboard" element={
+                <RoleBasedRoute allowedRoles={['admin']}>
+                  <AdminDashboard />
+                </RoleBasedRoute>
+              } />
               
               {/* 404 Route */}
               <Route path="*" element={<NotFound />} />
