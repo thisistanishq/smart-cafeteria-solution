@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -57,14 +56,22 @@ const Scanner = () => {
   
   const handleAddToCart = () => {
     if (scannedItem) {
-      // Fix the addToCart call to use the correct parameters
-      addToCart({
-        id: scannedItem.id,
-        name: scannedItem.name,
-        price: scannedItem.price,
-        imageUrl: scannedItem.image_url,
-        quantity: 1
-      });
+      // Fixed: Call addToCart with the correct parameters (item, quantity, specialInstructions)
+      addToCart(
+        {
+          id: scannedItem.id,
+          name: scannedItem.name,
+          price: scannedItem.price,
+          imageUrl: scannedItem.image_url,
+          category: scannedItem.category || 'other',
+          description: scannedItem.description || '',
+          ingredients: [],
+          status: 'available',
+          prepTime: scannedItem.preparation_time || 10,
+        }, 
+        1, // Quantity
+        '' // Special instructions (empty)
+      );
       
       navigate('/cart');
     }
