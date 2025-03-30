@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
+import { razorpayService } from '@/services/supabase';
 
 declare global {
   interface Window {
@@ -37,31 +38,57 @@ export const RazorpayButton: React.FC<RazorpayButtonProps> = ({
     };
   }, []);
   
-  const handlePayment = () => {
+  const handlePayment = async () => {
     setIsLoading(true);
     
     try {
+      // Create Razorpay order
+      const { data, error } = await razorpayService.createOrder(amount);
+      
+      if (error) throw new Error(error.message);
+      if (!data || !data.order || !data.order.id) throw new Error('Failed to create order');
+      
+      const orderId = data.order.id;
+      
       const options = {
-        key: "rzp_test_LWHOa6RA1jVpOB", // Enter the Key ID here
+        key: "rzp_test_POq2XFKRJtQMNr", // Your provided key
         amount: parseInt((amount * 100).toString()), // Amount in paise
         currency: "INR",
         name: "Smart Cafeteria",
         description: "Payment for cafeteria order",
+        order_id: orderId,
         image: "https://example.com/your_logo",
-        handler: function(response: { razorpay_payment_id: string }) {
+        handler: async function(response: { razorpay_payment_id: string, razorpay_order_id: string, razorpay_signature: string }) {
+          // Verify payment
+          const { data: verifyData, error: verifyError } = await razorpayService.verifyPayment(
+            response.razorpay_payment_id, 
+            response.razorpay_order_id, 
+            response.razorpay_signature
+          );
+          
+          if (verifyError || !verifyData.valid) {
+            toast({
+              title: "Payment Verification Failed",
+              description: "Your payment could not be verified. Please contact support.",
+              variant: "destructive",
+            });
+            return;
+          }
+          
           // Handle the success response
           onSuccess(response.razorpay_payment_id);
           toast({
             title: "Payment Successful",
             description: `Payment ID: ${response.razorpay_payment_id}`,
           });
+          setIsLoading(false);
         },
         prefill: {
           name: customerName,
           email: customerEmail,
         },
         theme: {
-          color: "#eab308",
+          color: "#15187C", // Updated to your requested color
         },
         modal: {
           ondismiss: function() {
@@ -92,7 +119,7 @@ export const RazorpayButton: React.FC<RazorpayButtonProps> = ({
     <Button 
       onClick={handlePayment} 
       disabled={isLoading}
-      className="w-full bg-turmeric-500 hover:bg-turmeric-600"
+      className="w-full bg-[#15187C] hover:bg-[#0e105a]"
     >
       {isLoading ? 'Processing...' : 'Pay with Razorpay'}
     </Button>

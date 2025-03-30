@@ -320,3 +320,53 @@ export const inventoryService = {
     return { data, error };
   }
 };
+
+// New AI service for smart recommendations
+export const aiService = {
+  // Get AI recommendations for users based on order history
+  async getUserRecommendations(userId: string) {
+    const { data, error } = await supabase.functions.invoke('get-user-recommendations', {
+      body: { userId }
+    });
+    return { data, error };
+  },
+  
+  // Get AI recommendations for inventory management
+  async getInventoryRecommendations() {
+    const { data, error } = await supabase.functions.invoke('get-inventory-recommendations');
+    return { data, error };
+  },
+  
+  // Get sales predictions based on historical data
+  async getSalesPredictions() {
+    const { data, error } = await supabase.functions.invoke('get-sales-predictions');
+    return { data, error };
+  },
+
+  // Process chat message with AI
+  async processChatMessage(message: string, chatHistory: Array<{role: string, content: string}>) {
+    const { data, error } = await supabase.functions.invoke('process-chat-message', {
+      body: { message, chatHistory }
+    });
+    return { data, error };
+  }
+};
+
+// New Razorpay service
+export const razorpayService = {
+  // Create a Razorpay order
+  async createOrder(amount: number) {
+    const { data, error } = await supabase.functions.invoke('create-razorpay-order', {
+      body: { amount }
+    });
+    return { data, error };
+  },
+  
+  // Verify a Razorpay payment
+  async verifyPayment(paymentId: string, orderId: string, signature: string) {
+    const { data, error } = await supabase.functions.invoke('verify-razorpay-payment', {
+      body: { paymentId, orderId, signature }
+    });
+    return { data, error };
+  }
+};
