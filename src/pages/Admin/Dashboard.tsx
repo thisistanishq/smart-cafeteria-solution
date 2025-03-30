@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom'; 
 import { 
@@ -85,6 +84,21 @@ const SalesVisualization = ({ data }: { data: any[] }) => {
   );
 };
 
+// Create an adapter to map database inventory items to our interface
+const adaptInventoryData = (dbInventory: any[]): InventoryItem[] => {
+  return dbInventory.map(item => ({
+    id: item.id,
+    name: item.name,
+    category: item.category,
+    quantity: item.quantity,
+    unit: item.unit,
+    thresholdLevel: item.threshold, // Map threshold to thresholdLevel
+    cost: item.cost_per_unit, // Map cost_per_unit to cost
+    supplier: 'Unknown', // Default value since it's missing in DB
+    lastRestocked: item.updated_at // Use updated_at as lastRestocked
+  }));
+};
+
 const AdminDashboard = () => {
   const navigate = useNavigate();
   const { user, isAuthenticated } = useApp();
@@ -113,10 +127,13 @@ const AdminDashboard = () => {
         // Fetch inventory
         const { data: inventoryData } = await inventoryService.getAllInventory();
         if (inventoryData) {
-          setInventoryItems(inventoryData);
-          // Find low stock items
+          // Use the adapter to convert database schema to our interface
+          const adaptedInventory = adaptInventoryData(inventoryData);
+          setInventoryItems(adaptedInventory);
+          
+          // Find low stock items using the adapted data
           setLowStockItems(
-            inventoryData.filter(item => item.quantity <= (item.thresholdLevel || 10))
+            adaptedInventory.filter(item => item.quantity <= item.thresholdLevel)
           );
         }
         

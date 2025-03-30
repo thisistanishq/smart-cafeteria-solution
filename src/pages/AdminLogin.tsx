@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -70,8 +69,9 @@ const AdminLogin: React.FC = () => {
         throw new Error('Access denied: Admin privileges required');
       }
       
-      // Set user in context
-      login(data.user);
+      // Fix the login function call to match the expected parameters in context
+      // Assuming it needs both email and password
+      login(email, password);
       
       toast({
         title: "Login Successful",

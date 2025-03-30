@@ -22,7 +22,7 @@ import StaffOrders from "./pages/StaffOrders";
 import StaffBilling from "./pages/StaffBilling";
 import MenuManagement from "./pages/MenuManagement";
 import AdminDashboard from "./pages/Admin/Dashboard";
-import AdminLogin from "./pages/AdminLogin";
+import AdminLogin from "./pages/AdminLogin"; // Fix the import path
 import Scanner from "./pages/Scanner";
 import NotFound from "./pages/NotFound";
 

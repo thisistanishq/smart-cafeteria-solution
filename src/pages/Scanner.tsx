@@ -39,7 +39,7 @@ const Scanner = () => {
         const mockMenuItemId = 'item-1'; 
         
         // Fix the getMenuItem call to use the correct number of parameters
-        const { data, error } = await menuService.getMenuItem(mockMenuItemId, {});
+        const { data, error } = await menuService.getMenuItem(mockMenuItemId);
         
         if (error) throw new Error(error.message);
         if (!data) throw new Error('Item not found');
@@ -57,6 +57,7 @@ const Scanner = () => {
   
   const handleAddToCart = () => {
     if (scannedItem) {
+      // Fix the addToCart call to use the correct parameters
       addToCart({
         id: scannedItem.id,
         name: scannedItem.name,
