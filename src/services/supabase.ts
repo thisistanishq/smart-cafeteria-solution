@@ -286,18 +286,36 @@ export const inventoryService = {
 
   // Add new inventory item
   async addInventoryItem(item: Omit<InventoryItem, 'id'>) {
+    // Fixed: ensure we're passing a single item and correctly mapping property names
     const { data, error } = await supabase
       .from('inventory')
-      .insert([item])
+      .insert({
+        name: item.name,
+        category: item.category,
+        quantity: item.quantity,
+        unit: item.unit,
+        threshold: item.thresholdLevel,
+        cost_per_unit: item.cost,
+      })
       .select();
     return { data, error };
   },
 
   // Update inventory item
   async updateInventoryItem(id: string, updates: Partial<InventoryItem>) {
+    // Ensure we're correctly mapping properties when updating
+    const dbUpdates: any = {};
+    
+    if (updates.name !== undefined) dbUpdates.name = updates.name;
+    if (updates.category !== undefined) dbUpdates.category = updates.category;
+    if (updates.quantity !== undefined) dbUpdates.quantity = updates.quantity;
+    if (updates.unit !== undefined) dbUpdates.unit = updates.unit;
+    if (updates.thresholdLevel !== undefined) dbUpdates.threshold = updates.thresholdLevel;
+    if (updates.cost !== undefined) dbUpdates.cost_per_unit = updates.cost;
+    
     const { data, error } = await supabase
       .from('inventory')
-      .update(updates)
+      .update(dbUpdates)
       .eq('id', id);
     return { data, error };
   }
