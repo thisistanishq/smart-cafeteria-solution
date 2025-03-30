@@ -1,17 +1,22 @@
+
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader } from '@/components/Loader';
 import { NavBar } from '@/components/NavBar';
+import { MobileNavBar } from '@/components/MobileNavBar';
 import { motion } from 'framer-motion';
 import { useApp } from '@/context/AppContext';
 import { menuService } from '@/services/supabase';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { ChevronLeft } from 'lucide-react';
 
 const Scanner = () => {
   const { user, isAuthenticated, cart, addToCart } = useApp();
   const navigate = useNavigate();
   const location = useLocation();
+  const isMobile = useIsMobile();
   
   const [isScanning, setIsScanning] = useState(false);
   const [scannedItem, setScannedItem] = useState<any>(null);
@@ -83,24 +88,38 @@ const Scanner = () => {
   
   return (
     <div className="min-h-screen bg-gray-50">
-      <NavBar />
+      {!isMobile && <NavBar />}
       
-      <main className="cafeteria-container py-8">
+      <main className={isMobile ? "py-4 px-4" : "cafeteria-container py-8"}>
+        {isMobile && (
+          <div className="flex items-center mb-4">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={() => navigate(-1)}
+              className="mr-2"
+            >
+              <ChevronLeft className="h-6 w-6" />
+            </Button>
+            <h1 className="text-xl font-bold">QR Scanner</h1>
+          </div>
+        )}
+        
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="max-w-md mx-auto"
+          className={isMobile ? "w-full" : "max-w-md mx-auto"}
         >
           <Card className="shadow-lg overflow-hidden">
-            <CardHeader className="text-center bg-[#15187C] text-white">
-              <CardTitle className="text-2xl">QR Code Scanner</CardTitle>
+            <CardHeader className={`text-center ${isMobile ? "pt-4 pb-2 px-4" : ""} bg-[#15187C] text-white`}>
+              <CardTitle className={`${isMobile ? "text-xl" : "text-2xl"}`}>QR Code Scanner</CardTitle>
               <CardDescription className="text-gray-200">
                 Scan a QR code to quickly add items to your cart
               </CardDescription>
             </CardHeader>
             
-            <CardContent className="p-6">
+            <CardContent className={isMobile ? "p-4" : "p-6"}>
               {scannedItem ? (
                 <motion.div
                   initial={{ opacity: 0, scale: 0.9 }}
@@ -143,7 +162,7 @@ const Scanner = () => {
                 </motion.div>
               ) : (
                 <div className="space-y-6">
-                  <div className="aspect-square max-w-[280px] mx-auto bg-gray-100 rounded-lg relative overflow-hidden">
+                  <div className={`aspect-square ${isMobile ? "max-w-full" : "max-w-[280px]"} mx-auto bg-gray-100 rounded-lg relative overflow-hidden`}>
                     {isScanning ? (
                       <div className="absolute inset-0 flex items-center justify-center">
                         <div className="relative">
@@ -178,7 +197,7 @@ const Scanner = () => {
                   </div>
                   
                   <Button 
-                    className="w-full bg-[#15187C] hover:bg-[#0e105a]"
+                    className="w-full bg-amber-500 hover:bg-amber-600"
                     onClick={startScanning}
                     disabled={isScanning}
                   >
@@ -200,6 +219,8 @@ const Scanner = () => {
           </Card>
         </motion.div>
       </main>
+      
+      {isMobile && <MobileNavBar />}
     </div>
   );
 };
