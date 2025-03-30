@@ -1,9 +1,8 @@
-
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
-  AreaChart, 
-  BarChart, 
+  AreaChart as AreaChartIcon, 
+  BarChart as BarChartIcon, 
   DollarSign, 
   ShoppingBag, 
   Users, 
@@ -16,7 +15,7 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
-  BarChart as RechartsBarChart,
+  BarChart,
   Bar,
   XAxis,
   YAxis,
