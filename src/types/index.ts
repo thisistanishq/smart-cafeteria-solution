@@ -1,3 +1,4 @@
+
 // User types
 export type UserRole = 'student' | 'staff' | 'cafeteria_staff' | 'admin';
 

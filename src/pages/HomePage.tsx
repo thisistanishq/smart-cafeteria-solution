@@ -1,7 +1,20 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, ShoppingCart, Bell, Filter, ChevronRight, Home, History, MessageSquare, User, Clock } from 'lucide-react';
+import { 
+  Search, 
+  ShoppingCart, 
+  Bell, 
+  Filter, 
+  ChevronRight, 
+  Home as HomeIcon, 
+  History, 
+  MessageSquare, 
+  User,
+  Clock,
+  Wallet,
+  UserCheck
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
@@ -170,7 +183,7 @@ const HomePage = () => {
                     className="rounded-lg shadow-2xl animate-zoom-in"
                   />
                   <div className="absolute -bottom-6 -right-6 bg-white rounded-full p-4 shadow-lg hidden md:block animate-slide-in">
-                    <Home className="h-10 w-10 text-turmeric-500" />
+                    <HomeIcon className="h-10 w-10 text-turmeric-500" />
                   </div>
                 </div>
               </div>
@@ -213,7 +226,7 @@ const HomePage = () => {
                   <CardContent className="pt-6">
                     <div className="flex flex-col items-center text-center">
                       <div className="p-3 rounded-full bg-curry-100 text-curry-600 mb-4">
-                        <ShoppingCart className="h-8 w-8" />
+                        <Wallet className="h-8 w-8" />
                       </div>
                       <h3 className="text-xl font-semibold mb-2">Cashless Payments</h3>
                       <p className="text-gray-600">
@@ -228,7 +241,7 @@ const HomePage = () => {
                   <CardContent className="pt-6">
                     <div className="flex flex-col items-center text-center">
                       <div className="p-3 rounded-full bg-spice-100 text-spice-600 mb-4">
-                        <User className="h-8 w-8" />
+                        <UserCheck className="h-8 w-8" />
                       </div>
                       <h3 className="text-xl font-semibold mb-2">Personalized Experience</h3>
                       <p className="text-gray-600">
