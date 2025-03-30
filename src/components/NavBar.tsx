@@ -10,7 +10,10 @@ import {
   Home,
   Utensils,
   ClipboardList,
-  Wallet
+  Wallet,
+  Calculator,
+  BarChart3,
+  Shield
 } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
 import { 
@@ -24,6 +27,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { motion } from 'framer-motion';
 
 interface NavItemProps {
   to: string;
@@ -35,7 +39,7 @@ interface NavItemProps {
 
 const NavItem: React.FC<NavItemProps> = ({ to, label, icon, onClick, isMobile = false }) => {
   const baseClasses = "flex items-center gap-2 transition-colors";
-  const desktopClasses = "px-4 py-2 hover:text-turmeric-500";
+  const desktopClasses = "px-4 py-2 hover:text-[#15187C]";
   const mobileClasses = "px-4 py-3 hover:bg-muted rounded-md text-lg";
   
   const classes = isMobile 
@@ -72,11 +76,12 @@ export const NavBar: React.FC = () => {
   // Add admin or staff specific routes
   if (user?.role === 'admin') {
     navItems.push(
-      { to: '/admin/dashboard', label: 'Admin Dashboard', icon: null }
+      { to: '/admin/dashboard', label: 'Admin Dashboard', icon: <BarChart3 size={20} /> }
     );
   } else if (user?.role === 'cafeteria_staff') {
     navItems.push(
-      { to: '/staff/orders', label: 'Manage Orders', icon: null }
+      { to: '/staff/orders', label: 'Manage Orders', icon: <ClipboardList size={20} /> },
+      { to: '/staff/billing', label: 'Billing System', icon: <Calculator size={20} /> }
     );
   }
   
@@ -85,57 +90,84 @@ export const NavBar: React.FC = () => {
       <div className="cafeteria-container flex items-center justify-between py-4">
         {/* Logo & Brand */}
         <Link to="/" className="flex items-center gap-2">
-          <Utensils className="h-8 w-8 text-turmeric-600" />
-          <span className="font-bold text-xl">Smart Cafeteria</span>
+          <motion.div
+            whileHover={{ rotate: [0, -10, 10, -10, 0] }}
+            transition={{ duration: 0.5 }}
+          >
+            <Utensils className="h-8 w-8 text-[#15187C]" />
+          </motion.div>
+          <motion.span 
+            className="font-bold text-xl"
+            initial={{ opacity: 1 }}
+            whileHover={{ opacity: 0.8 }}
+            transition={{ duration: 0.2 }}
+          >
+            Smart Cafeteria
+          </motion.span>
         </Link>
         
         {/* Desktop Navigation */}
         <div className="hidden md:flex items-center space-x-2">
           {navItems.map((item) => (
-            <NavItem 
-              key={item.to} 
-              to={item.to} 
-              label={item.label} 
-              icon={item.icon} 
-            />
+            <motion.div
+              key={item.to}
+              whileHover={{ y: -2 }}
+              transition={{ type: "spring", stiffness: 300, damping: 20 }}
+            >
+              <NavItem 
+                to={item.to} 
+                label={item.label} 
+                icon={item.icon} 
+              />
+            </motion.div>
           ))}
         </div>
         
         {/* Right side icons */}
         <div className="flex items-center gap-2">
           {/* Cart button */}
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="relative"
-            onClick={() => navigate('/cart')}
+          <motion.div
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
           >
-            <ShoppingCart className="h-5 w-5" />
-            {totalItems > 0 && (
-              <Badge 
-                className="absolute -top-1 -right-1 px-1.5 bg-turmeric-500 text-white" 
-                variant="default"
-              >
-                {totalItems}
-              </Badge>
-            )}
-          </Button>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="relative"
+              onClick={() => navigate('/cart')}
+            >
+              <ShoppingCart className="h-5 w-5" />
+              {totalItems > 0 && (
+                <Badge 
+                  className="absolute -top-1 -right-1 px-1.5 bg-[#15187C] text-white" 
+                  variant="default"
+                >
+                  {totalItems}
+                </Badge>
+              )}
+            </Button>
+          </motion.div>
           
           {/* User dropdown */}
           {isAuthenticated ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="rounded-full">
-                  {user?.profileImageUrl ? (
-                    <img 
-                      src={user.profileImageUrl} 
-                      alt={user.name} 
-                      className="h-8 w-8 rounded-full object-cover"
-                    />
-                  ) : (
-                    <User className="h-5 w-5" />
-                  )}
-                </Button>
+                <motion.div
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                >
+                  <Button variant="ghost" size="icon" className="rounded-full">
+                    {user?.profileImageUrl ? (
+                      <img 
+                        src={user.profileImageUrl} 
+                        alt={user.name} 
+                        className="h-8 w-8 rounded-full object-cover"
+                      />
+                    ) : (
+                      <User className="h-5 w-5" />
+                    )}
+                  </Button>
+                </motion.div>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuLabel>My Account</DropdownMenuLabel>
@@ -161,6 +193,27 @@ export const NavBar: React.FC = () => {
                 <DropdownMenuItem onClick={() => navigate('/orders')}>
                   My Orders
                 </DropdownMenuItem>
+                {user?.role === 'admin' && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => navigate('/admin/dashboard')} className="text-[#15187C]">
+                      <Shield className="mr-2 h-4 w-4" />
+                      Admin Dashboard
+                    </DropdownMenuItem>
+                  </>
+                )}
+                {user?.role === 'cafeteria_staff' && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => navigate('/staff/orders')}>
+                      Manage Orders
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate('/staff/billing')}>
+                      <Calculator className="mr-2 h-4 w-4" />
+                      Billing System
+                    </DropdownMenuItem>
+                  </>
+                )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleLogout} className="text-red-500">
                   <LogOut className="mr-2 h-4 w-4" />
@@ -169,17 +222,31 @@ export const NavBar: React.FC = () => {
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
-            <Button variant="default" onClick={() => navigate('/login')}>
-              Login
-            </Button>
+            <motion.div
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <Button 
+                variant="default" 
+                onClick={() => navigate('/login')}
+                className="bg-[#15187C] hover:bg-[#0e105a]"
+              >
+                Login
+              </Button>
+            </motion.div>
           )}
           
           {/* Mobile menu button */}
           <Sheet open={isMenuOpen} onOpenChange={setIsMenuOpen}>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="md:hidden">
-                <Menu className="h-5 w-5" />
-              </Button>
+              <motion.div
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+              >
+                <Button variant="ghost" size="icon" className="md:hidden">
+                  <Menu className="h-5 w-5" />
+                </Button>
+              </motion.div>
             </SheetTrigger>
             <SheetContent side="right" className="w-[250px] p-0">
               <div className="flex flex-col h-full p-4">
@@ -189,7 +256,7 @@ export const NavBar: React.FC = () => {
                     className="flex items-center gap-2"
                     onClick={() => setIsMenuOpen(false)}
                   >
-                    <Utensils className="h-6 w-6 text-turmeric-600" />
+                    <Utensils className="h-6 w-6 text-[#15187C]" />
                     <span className="font-bold">Smart Cafeteria</span>
                   </Link>
                   <Button 
@@ -252,6 +319,7 @@ export const NavBar: React.FC = () => {
                           navigate('/login');
                           setIsMenuOpen(false);
                         }}
+                        className="bg-[#15187C] hover:bg-[#0e105a]"
                       >
                         Login
                       </Button>

@@ -19,8 +19,10 @@ import Orders from "./pages/Orders";
 import OrderDetail from "./pages/OrderDetail";
 import Wallet from "./pages/Wallet";
 import StaffOrders from "./pages/StaffOrders";
+import StaffBilling from "./pages/StaffBilling";
 import MenuManagement from "./pages/MenuManagement";
 import AdminDashboard from "./pages/Admin/Dashboard";
+import AdminLogin from "./components/AdminLogin";
 import Scanner from "./pages/Scanner";
 import NotFound from "./pages/NotFound";
 
@@ -56,9 +58,11 @@ const App = () => (
               
               {/* Staff Routes */}
               <Route path="/staff/orders" element={<StaffOrders />} />
+              <Route path="/staff/billing" element={<StaffBilling />} />
               <Route path="/staff/menu" element={<MenuManagement />} />
               
               {/* Admin Routes */}
+              <Route path="/admin/login" element={<AdminLogin />} />
               <Route path="/admin/dashboard" element={<AdminDashboard />} />
               
               {/* 404 Route */}
