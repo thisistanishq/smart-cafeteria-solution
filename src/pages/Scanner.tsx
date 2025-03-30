@@ -38,13 +38,14 @@ const Scanner = () => {
         // Mock QR scan - in real app, this ID would come from the QR scanner
         const mockMenuItemId = 'item-1'; 
         
-        const { data, error } = await menuService.getMenuItem(mockMenuItemId);
+        // Fix the getMenuItem call to use the correct number of parameters
+        const { data, error } = await menuService.getMenuItem(mockMenuItemId, {});
         
         if (error) throw new Error(error.message);
         if (!data) throw new Error('Item not found');
         
         setScannedItem(data);
-      } catch (err) {
+      } catch (err: any) {
         setError('Failed to scan item. Please try again.');
         console.error('Scan error:', err);
       } finally {

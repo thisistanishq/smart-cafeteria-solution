@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { MessageCircle, X, Send, Zap, Robot } from 'lucide-react';
+import { MessageCircle, X, Send, Zap, Bot } from 'lucide-react';
 import { aiService } from '@/services/supabase';
 import { AnimatePresence, motion } from 'framer-motion';
 
@@ -187,7 +187,7 @@ export const ChatBot: React.FC = () => {
                     } 
                   }}
                 >
-                  <Robot className="h-5 w-5" />
+                  <Bot className="h-5 w-5" />
                 </motion.div>
                 <h3 className="font-semibold">Smart Cafeteria Assistant</h3>
               </div>
