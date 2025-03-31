@@ -1,334 +1,348 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, ShoppingCart, Wallet, X, Maximize2, Minimize2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useToast } from '@/hooks/use-toast';
+import { Textarea } from '@/components/ui/textarea';
+import { MessageCircle, X, Send, Zap, Bot, ShoppingCart } from 'lucide-react';
+import { aiService } from '@/services/supabase';
+import { AnimatePresence, motion } from 'framer-motion';
 import { useApp } from '@/context/AppContext';
-import { MenuItem } from '@/types';
+import { useNavigate } from 'react-router-dom';
 
-interface ChatMessage {
-  id: string;
+type Message = {
   role: 'user' | 'assistant';
   content: string;
   timestamp: Date;
+};
+
+interface ChatBotProps {
+  onClose?: () => void;
 }
 
-export interface ChatBotProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onMinimize: () => void;
-  onMaximize: () => void;
-  isMinimized: boolean;
-}
-
-export const ChatBot: React.FC<ChatBotProps> = ({ 
-  isOpen, 
-  onClose, 
-  onMinimize, 
-  onMaximize, 
-  isMinimized 
-}) => {
-  const [input, setInput] = useState('');
-  const [activeTab, setActiveTab] = useState('chat');
-  const [messages, setMessages] = useState<ChatMessage[]>([
+export const ChatBot: React.FC<ChatBotProps> = ({ onClose }) => {
+  const [message, setMessage] = useState('');
+  const [messages, setMessages] = useState<Message[]>([
     {
-      id: '1',
       role: 'assistant',
-      content: 'Hi! I\'m your smart cafeteria assistant. I can help you order food, check menu items, or answer questions about nutrition. How can I help you today?',
+      content: "Hello! I'm your Smart Cafeteria assistant. I can help with menu recommendations, dietary suggestions, and placing orders. How can I help you today?",
       timestamp: new Date()
     }
   ]);
-  const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
+  
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const { addToCart, menuItems, user, orders } = useApp();
-
-  useEffect(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [messages]);
-
-  const handleSendMessage = () => {
-    if (!input.trim()) return;
-
-    // Add user message
-    const userMessage: ChatMessage = {
-      id: Date.now().toString(),
-      role: 'user',
-      content: input,
-      timestamp: new Date()
-    };
-
-    setMessages(prevMessages => [...prevMessages, userMessage]);
-    setInput('');
-
-    // Process the message and generate a response
-    setTimeout(() => {
-      const response = processUserMessage(input);
-      setMessages(prevMessages => [...prevMessages, response]);
-    }, 500);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const { menuItems, addToCart } = useApp();
+  const navigate = useNavigate();
+  
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
+  
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, isTyping]);
+  
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.focus();
+    }
+  }, []);
 
-  const processUserMessage = (message: string): ChatMessage => {
-    const lowerMsg = message.toLowerCase();
+  // Process food intents from user message
+  const processMenuIntent = (userMsg: string): { action: string, item?: string, success: boolean } => {
+    const lowerMsg = userMsg.toLowerCase();
     
-    // Check for food order intents
-    if (lowerMsg.includes('order') || lowerMsg.includes('get') || lowerMsg.includes('want')) {
-      // Extract food items from request
-      const foundItems = findMenuItemsInText(lowerMsg);
+    // Handle ordering intent
+    if (lowerMsg.includes('order') || lowerMsg.includes('add to cart')) {
+      const itemNames = menuItems.map(item => item.name.toLowerCase());
       
-      if (foundItems.length > 0) {
-        // Add items to cart
-        foundItems.forEach(item => {
-          addToCart(item, 1);
-        });
-        
-        return {
-          id: Date.now().toString(),
-          role: 'assistant',
-          content: `I've added ${foundItems.map(i => i.name).join(', ')} to your cart. Would you like to order anything else or proceed to checkout?`,
-          timestamp: new Date()
-        };
+      // Find which menu item was mentioned
+      for (const item of menuItems) {
+        if (lowerMsg.includes(item.name.toLowerCase())) {
+          // Add to cart and return success
+          addToCart(item, 1, '');
+          return { action: 'order', item: item.name, success: true };
+        }
+      }
+      
+      // No specific item found in message
+      return { action: 'order', success: false };
+    }
+    
+    // Handle diet-specific recommendations
+    if (lowerMsg.includes('diabetes') || lowerMsg.includes('diabetic')) {
+      return { action: 'diet', success: true };
+    }
+    
+    // Handle recommendation request
+    if (lowerMsg.includes('recommend') || lowerMsg.includes('suggestion')) {
+      return { action: 'recommend', success: true };
+    }
+    
+    // No specific intent found
+    return { action: 'none', success: false };
+  };
+  
+  const generateResponse = (userMessage: string, intent: { action: string, item?: string, success: boolean }): string => {
+    // Handle specific intents with custom responses
+    if (intent.action === 'order' && intent.success) {
+      return `I've added ${intent.item} to your cart! Would you like to proceed to checkout or add more items?`;
+    }
+    
+    if (intent.action === 'order' && !intent.success) {
+      return "I'd be happy to add something to your cart, but I couldn't identify which menu item you wanted. Could you specify the dish name?";
+    }
+    
+    if (intent.action === 'diet' && intent.success) {
+      // Filter for diabetic-friendly options
+      const diabeticOptions = menuItems
+        .filter(item => 
+          item.tags?.includes('low-sugar') || 
+          item.tags?.includes('diabetic-friendly') ||
+          (item.category !== 'dessert' && item.category !== 'sweet')
+        )
+        .slice(0, 3);
+      
+      if (diabeticOptions.length > 0) {
+        return `For someone with diabetes, I'd recommend these lower-sugar options: ${diabeticOptions.map(item => item.name).join(', ')}. These items are designed to be gentler on blood sugar levels.`;
+      } else {
+        return "I recommend choosing items that are low in sugar and refined carbohydrates. Perhaps try some of our protein-rich dishes with vegetables.";
       }
     }
     
-    // Check for dietary restrictions
-    if (lowerMsg.includes('diabetes') || lowerMsg.includes('diabetic')) {
-      const lowSugarItems = menuItems.filter(item => 
-        !item.tags?.includes('sweet') && 
-        item.calories && item.calories < 300 && 
-        item.veg
-      );
-      
-      return {
-        id: Date.now().toString(),
-        role: 'assistant',
-        content: `For people with diabetes, I recommend these lower carb options: ${lowSugarItems.slice(0, 3).map(i => i.name).join(', ')}. These items are lower in carbohydrates and have a lower glycemic index.`,
-        timestamp: new Date()
-      };
-    }
-    
-    // Check for recommendations
-    if (lowerMsg.includes('recommend') || lowerMsg.includes('suggestion') || lowerMsg.includes('popular')) {
-      // Get popular items based on ratings and orders
-      const popularItems = menuItems
+    if (intent.action === 'recommend') {
+      // Get top-rated items
+      const topRated = menuItems
         .filter(item => item.status === 'available')
         .sort((a, b) => (b.rating || 0) - (a.rating || 0))
         .slice(0, 3);
       
-      return {
-        id: Date.now().toString(),
-        role: 'assistant',
-        content: `Based on our most popular items, I recommend: ${popularItems.map(i => i.name).join(', ')}. Would you like to know more about any of these?`,
-        timestamp: new Date()
-      };
+      return `Based on customer favorites, I'd recommend: ${topRated.map(item => item.name).join(', ')}. Would you like to know more about any of these dishes?`;
     }
     
-    // Check for vegetarian options
-    if (lowerMsg.includes('vegetarian') || lowerMsg.includes('veg')) {
-      const vegItems = menuItems
-        .filter(item => item.veg && item.status === 'available')
-        .sort((a, b) => (b.rating || 0) - (a.rating || 0))
-        .slice(0, 3);
-      
-      return {
-        id: Date.now().toString(),
-        role: 'assistant',
-        content: `Here are some great vegetarian options: ${vegItems.map(i => i.name).join(', ')}. All of these are customer favorites!`,
-        timestamp: new Date()
-      };
+    // General responses for menu, hours, etc.
+    if (userMessage.toLowerCase().includes('menu')) {
+      return "Our menu features a variety of delicious South Indian options! We have dosas, idlis, vadas, biryani, and more. You can check the full menu in the Menu section. Would you like me to recommend something?";
     }
     
-    // Check for spicy food
-    if (lowerMsg.includes('spicy')) {
-      const spicyItems = menuItems
-        .filter(item => 
-          item.tags?.includes('spicy') && 
-          item.status === 'available'
-        )
-        .slice(0, 3);
-      
-      return {
-        id: Date.now().toString(),
-        role: 'assistant',
-        content: `If you enjoy spicy food, try these: ${spicyItems.map(i => i.name).join(', ')}. These are known for their vibrant flavors and heat!`,
-        timestamp: new Date()
-      };
+    if (userMessage.toLowerCase().includes('hours') || userMessage.toLowerCase().includes('open')) {
+      return "We're open Monday through Friday from 7:30 AM to 8:00 PM, and weekends from 9:00 AM to 6:00 PM.";
+    }
+    
+    if (userMessage.toLowerCase().includes('payment') || userMessage.toLowerCase().includes('pay')) {
+      return "We accept all major credit cards, digital wallets like UPI, as well as payments through our app wallet system!";
     }
     
     // Default response
-    return {
-      id: Date.now().toString(),
-      role: 'assistant',
-      content: 'I can help you find food items, make recommendations based on dietary preferences, or answer questions about our menu. Is there something specific you\'re looking for?',
+    return "I'm here to help with menu recommendations, dietary questions, and placing orders. You can ask me about our menu, make special requests, or tell me about dietary preferences for personalized suggestions!";
+  };
+  
+  const handleSendMessage = async () => {
+    if (!message.trim()) return;
+    
+    const userMessage: Message = {
+      role: 'user',
+      content: message,
       timestamp: new Date()
     };
-  };
-
-  // Helper function to find menu items mentioned in text
-  const findMenuItemsInText = (text: string): MenuItem[] => {
-    const foundItems: MenuItem[] = [];
     
-    menuItems.forEach(item => {
-      const itemNameLower = item.name.toLowerCase();
-      if (text.toLowerCase().includes(itemNameLower) && item.status === 'available') {
-        foundItems.push(item);
-      }
-    });
+    setMessages((prev) => [...prev, userMessage]);
+    setMessage('');
+    setIsLoading(true);
+    setIsTyping(true);
     
-    return foundItems;
-  };
-
-  const renderWalletInfo = () => {
-    if (!user) {
-      return (
-        <div className="flex flex-col items-center justify-center h-40 text-center">
-          <p>Please login to view your wallet information.</p>
-        </div>
-      );
-    }
-
-    const recentTransactions = orders
-      .filter(order => order.customerId === user.id)
-      .slice(0, 5);
-
-    return (
-      <div className="space-y-4">
-        <div className="flex flex-col items-center p-4 bg-blue-950 rounded-lg">
-          <h3 className="text-lg font-medium mb-1">Current Balance</h3>
-          <p className="text-3xl font-bold">₹{user.walletBalance.toFixed(2)}</p>
-        </div>
+    // Process the message to determine intent
+    const intent = processMenuIntent(message);
+    
+    // If ordering intent was successful, navigate to cart after delay
+    const shouldNavigateToCart = intent.action === 'order' && intent.success;
+    
+    try {
+      // Generate response based on intent
+      const responseText = generateResponse(message, intent);
+      
+      // Simulate typing delay
+      setTimeout(() => {
+        setIsTyping(false);
         
-        <div>
-          <h3 className="text-lg font-medium mb-2">Recent Orders</h3>
-          {recentTransactions.length > 0 ? (
-            <div className="space-y-2">
-              {recentTransactions.map(tx => (
-                <div key={tx.id} className="flex justify-between items-center p-2 bg-blue-950/50 rounded-md">
-                  <div>
-                    <p className="font-medium">{tx.items.map(i => i.name).join(', ')}</p>
-                    <p className="text-xs text-gray-400">{new Date(tx.createdAt).toLocaleDateString()}</p>
-                  </div>
-                  <p className="font-medium">₹{tx.totalAmount.toFixed(2)}</p>
+        const botMessage: Message = {
+          role: 'assistant',
+          content: responseText,
+          timestamp: new Date()
+        };
+        
+        setMessages((prev) => [...prev, botMessage]);
+        
+        // If we detected an order intent and successfully added to cart, navigate after a delay
+        if (shouldNavigateToCart) {
+          setTimeout(() => {
+            navigate('/cart');
+            if (onClose) onClose();
+          }, 1500);
+        }
+      }, 1000 + Math.random() * 500); // Random delay between 1-1.5s for more natural feel
+      
+    } catch (error) {
+      console.error('Chat error:', error);
+      setIsTyping(false);
+      
+      const errorMessage: Message = {
+        role: 'assistant',
+        content: 'Sorry, I encountered an error. Please try again later.',
+        timestamp: new Date()
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  const bubbleVariants = {
+    initial: { 
+      opacity: 0, 
+      y: 20, 
+      scale: 0.8 
+    },
+    animate: { 
+      opacity: 1, 
+      y: 0, 
+      scale: 1,
+      transition: {
+        type: "spring",
+        damping: 20,
+        stiffness: 300,
+      }
+    },
+    exit: { 
+      opacity: 0, 
+      scale: 0.8,
+      transition: { 
+        duration: 0.2 
+      }
+    }
+  };
+  
+  const staggerContainerVariants = {
+    animate: {
+      transition: {
+        staggerChildren: 0.1
+      }
+    }
+  };
+  
+  return (
+    <div className="flex flex-col h-full">
+      {/* Header */}
+      <div className="bg-navy-800 text-white p-3 flex justify-between items-center">
+        <div className="flex items-center space-x-2">
+          <motion.div
+            animate={{ 
+              rotate: [0, 0, 5, -5, 0], 
+              y: [0, 0, -2, 2, 0],
+              transition: { 
+                duration: 2, 
+                repeat: Infinity, 
+                repeatDelay: 4 
+              } 
+            }}
+          >
+            <Bot className="h-5 w-5" />
+          </motion.div>
+          <h3 className="font-semibold">Smart Cafeteria Assistant</h3>
+        </div>
+        {onClose && (
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={onClose}
+            className="text-white hover:bg-navy-700 rounded-full h-8 w-8 p-0"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        )}
+      </div>
+      
+      {/* Messages container */}
+      <div className="flex-1 p-3 overflow-y-auto bg-gray-50">
+        <motion.div 
+          className="space-y-3"
+          variants={staggerContainerVariants}
+          initial="initial"
+          animate="animate"
+        >
+          {messages.map((msg, idx) => (
+            <motion.div 
+              key={idx}
+              variants={bubbleVariants}
+              className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+            >
+              <div className={`max-w-[80%] rounded-lg p-3 ${
+                msg.role === 'user' 
+                  ? 'bg-navy-700 text-white'
+                  : 'bg-white border border-gray-200'
+              }`}>
+                <p className="text-sm">{msg.content}</p>
+                <p className="text-xs mt-1 opacity-70">
+                  {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </p>
+              </div>
+            </motion.div>
+          ))}
+          
+          {isTyping && (
+            <motion.div 
+              className="flex justify-start"
+              variants={bubbleVariants}
+            >
+              <div className="max-w-[80%] rounded-lg p-3 bg-white border border-gray-200">
+                <div className="flex space-x-2 items-center">
+                  <div className="w-2 h-2 rounded-full bg-navy-700 animate-bounce" style={{ animationDelay: '0s' }}></div>
+                  <div className="w-2 h-2 rounded-full bg-navy-700 animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                  <div className="w-2 h-2 rounded-full bg-navy-700 animate-bounce" style={{ animationDelay: '0.4s' }}></div>
                 </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-center text-gray-400 py-4">No recent transactions</p>
+              </div>
+            </motion.div>
           )}
+          
+          <div ref={messagesEndRef} />
+        </motion.div>
+      </div>
+      
+      {/* Input area */}
+      <div className="border-t border-gray-200 p-3 bg-white">
+        <div className="flex items-center space-x-2">
+          <Textarea
+            ref={textareaRef}
+            placeholder="Type your message..."
+            className="flex-1 min-h-[40px] resize-none focus:border-navy-700 focus:ring-navy-700"
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleSendMessage();
+              }
+            }}
+          />
+          <motion.div
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+          >
+            <Button 
+              className="h-10 w-10 p-0 rounded-full bg-navy-700 hover:bg-navy-800 shadow transition-all duration-200"
+              onClick={handleSendMessage}
+              disabled={isLoading || !message.trim()}
+            >
+              {isLoading ? (
+                <Zap className="h-4 w-4 animate-pulse" />
+              ) : (
+                <Send className="h-4 w-4" />
+              )}
+            </Button>
+          </motion.div>
         </div>
       </div>
-    );
-  };
-
-  if (!isOpen) return null;
-
-  return (
-    <Card className={`fixed transition-all duration-300 shadow-xl bg-[#0c1329] border-[#384374] text-white overflow-hidden ${
-      isMinimized 
-        ? 'w-64 h-12 bottom-4 right-4'
-        : 'w-80 h-[500px] bottom-4 right-4 md:w-96 md:h-[600px]'
-    }`}>
-      {isMinimized ? (
-        <div className="flex items-center justify-between p-3 cursor-pointer" onClick={onMaximize}>
-          <div className="flex items-center">
-            <Avatar className="h-6 w-6 mr-2">
-              <AvatarImage src="/ai-assistant.png" />
-              <AvatarFallback className="bg-gradient-to-r from-purple-600 to-blue-600 text-white text-xs">AI</AvatarFallback>
-            </Avatar>
-            <span className="font-medium">Smart Assistant</span>
-          </div>
-          <Maximize2 className="h-4 w-4 text-gray-400" />
-        </div>
-      ) : (
-        <>
-          <CardHeader className="p-3 flex flex-row items-center justify-between bg-blue-950 border-b border-[#384374]">
-            <div className="flex items-center">
-              <Avatar className="h-8 w-8 mr-2">
-                <AvatarImage src="/ai-assistant.png" />
-                <AvatarFallback className="bg-gradient-to-r from-purple-600 to-blue-600 text-white">AI</AvatarFallback>
-              </Avatar>
-              <div>
-                <h3 className="font-semibold">Smart Assistant</h3>
-                <p className="text-xs text-gray-400">Always here to help</p>
-              </div>
-            </div>
-            <div className="flex">
-              <Button variant="ghost" size="icon" onClick={onMinimize} className="h-8 w-8">
-                <Minimize2 className="h-4 w-4" />
-              </Button>
-              <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8">
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-          </CardHeader>
-          
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col h-[calc(100%-56px)]">
-            <TabsList className="grid grid-cols-2 bg-[#131b38] border-b border-[#384374] rounded-none">
-              <TabsTrigger value="chat" className="data-[state=active]:bg-[#0c1329]">Chat</TabsTrigger>
-              <TabsTrigger value="wallet" className="data-[state=active]:bg-[#0c1329]">Wallet</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="chat" className="flex-1 flex flex-col m-0 p-0 overflow-hidden">
-              <CardContent className="flex-1 overflow-y-auto py-4 px-3 space-y-4">
-                {messages.map((message) => (
-                  <div 
-                    key={message.id} 
-                    className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                  >
-                    <div 
-                      className={`max-w-[80%] rounded-lg px-3 py-2 ${
-                        message.role === 'user' 
-                          ? 'bg-blue-600 text-white' 
-                          : 'bg-[#192244] border border-[#384374] text-white'
-                      }`}
-                    >
-                      <p>{message.content}</p>
-                      <p className="text-xs opacity-70 mt-1">
-                        {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-                <div ref={messagesEndRef} />
-              </CardContent>
-              
-              <CardFooter className="border-t border-[#384374] p-3">
-                <form 
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    handleSendMessage();
-                  }}
-                  className="flex w-full items-center space-x-2"
-                >
-                  <Input
-                    className="flex-1 bg-[#131b38] border-[#384374] text-white"
-                    placeholder="Type your message..."
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                  />
-                  <Button 
-                    type="submit" 
-                    size="icon" 
-                    className="bg-blue-600 hover:bg-blue-700"
-                  >
-                    <Send className="h-4 w-4" />
-                  </Button>
-                </form>
-              </CardFooter>
-            </TabsContent>
-            
-            <TabsContent value="wallet" className="flex-1 m-0 p-4 overflow-y-auto">
-              {renderWalletInfo()}
-            </TabsContent>
-          </Tabs>
-        </>
-      )}
-    </Card>
+    </div>
   );
 };

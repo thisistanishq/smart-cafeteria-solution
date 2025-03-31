@@ -38,7 +38,7 @@ interface AppActions {
   updateCartItemQuantity: (itemId: string, quantity: number) => void;
   clearCart: () => void;
   placeOrder: (paymentMethod: string) => Promise<Order | null>;
-  updateOrderStatus: (orderId: string, status: OrderStatus, additionalData?: any) => Promise<void>;
+  updateOrderStatus: (orderId: string, status: OrderStatus) => Promise<void>;
   cancelOrder: (orderId: string) => Promise<void>;
   addMenuItem: (item: Omit<MenuItem, 'id'>) => Promise<void>;
   updateMenuItem: (item: MenuItem) => Promise<void>;
@@ -60,13 +60,6 @@ import { mockOrders } from '@/data/orders';
 import { mockInventory } from '@/data/inventory';
 import { mockTransactions } from '@/data/transactions';
 
-// Function to generate a unique order number
-const generateOrderNumber = () => {
-  const timestamp = new Date().getTime();
-  const random = Math.floor(Math.random() * 1000);
-  return `ORD-${timestamp}-${random}`.substring(0, 16);
-};
-
 // Create the provider
 export const AppProvider: React.FC<{children: React.ReactNode}> = ({ children }) => {
   // State initialization
@@ -86,18 +79,6 @@ export const AppProvider: React.FC<{children: React.ReactNode}> = ({ children })
     if (storedUser) {
       setUser(JSON.parse(storedUser));
     }
-  }, []);
-
-  // Add order numbers to any orders that don't have them
-  useEffect(() => {
-    setOrders(prevOrders => {
-      return prevOrders.map(order => {
-        if (!order.orderNumber) {
-          return { ...order, orderNumber: generateOrderNumber() };
-        }
-        return order;
-      });
-    });
   }, []);
 
   // Login function
@@ -207,7 +188,7 @@ export const AppProvider: React.FC<{children: React.ReactNode}> = ({ children })
           price: item.price,
           quantity,
           total: quantity * item.price,
-          imageUrl: item.imageUrl || '',
+          imageUrl: item.imageUrl,
           specialInstructions
         }];
       }
@@ -296,7 +277,6 @@ export const AppProvider: React.FC<{children: React.ReactNode}> = ({ children })
         estimatedReadyTime: readyTime.toISOString(),
         paymentMethod: paymentMethod as any,
         paymentStatus: 'completed',
-        orderNumber: generateOrderNumber()
       };
       
       // In a real app, this would be an API call
@@ -321,7 +301,7 @@ export const AppProvider: React.FC<{children: React.ReactNode}> = ({ children })
           type: 'payment',
           status: 'completed',
           createdAt: now.toISOString(),
-          description: `Payment for order #${newOrder.orderNumber || newOrder.id.substring(0, 8)}`,
+          description: `Payment for order #${newOrder.id}`,
         };
         
         setTransactions(currentTransactions => [newTransaction, ...currentTransactions]);
@@ -332,7 +312,7 @@ export const AppProvider: React.FC<{children: React.ReactNode}> = ({ children })
       
       toast({
         title: "Order placed successfully",
-        description: `Your order ${newOrder.orderNumber || `#${newOrder.id.substring(6)}`} has been placed`,
+        description: `Your order #${newOrder.id.substring(6)} has been placed`,
       });
       
       return newOrder;
@@ -349,7 +329,7 @@ export const AppProvider: React.FC<{children: React.ReactNode}> = ({ children })
   };
 
   // Update order status
-  const updateOrderStatus = async (orderId: string, status: OrderStatus, additionalData = {}) => {
+  const updateOrderStatus = async (orderId: string, status: OrderStatus) => {
     setIsLoading(true);
     try {
       // In a real app, this would be an API call
@@ -358,7 +338,6 @@ export const AppProvider: React.FC<{children: React.ReactNode}> = ({ children })
           order.id === orderId 
             ? { 
                 ...order, 
-                ...additionalData,
                 status,
                 completedAt: status === 'completed' ? new Date().toISOString() : order.completedAt 
               } 
@@ -424,7 +403,7 @@ export const AppProvider: React.FC<{children: React.ReactNode}> = ({ children })
           type: 'deposit',
           status: 'completed',
           createdAt: new Date().toISOString(),
-          description: `Refund for cancelled order ${order.orderNumber || `#${order.id.substring(6)}`}`,
+          description: `Refund for cancelled order #${order.id.substring(6)}`,
         };
         
         setTransactions(currentTransactions => [newTransaction, ...currentTransactions]);
@@ -432,7 +411,7 @@ export const AppProvider: React.FC<{children: React.ReactNode}> = ({ children })
       
       toast({
         title: "Order cancelled",
-        description: `Your order ${order.orderNumber || `#${order.id.substring(6)}`} has been cancelled`,
+        description: `Your order #${order.id.substring(6)} has been cancelled`,
       });
     } catch (error) {
       toast({
@@ -546,16 +525,10 @@ export const AppProvider: React.FC<{children: React.ReactNode}> = ({ children })
       // In a real app, this would be an API call
       setUser(currentUser => {
         if (!currentUser) return null;
-        
-        const updatedUser = {
+        return {
           ...currentUser,
           walletBalance: currentUser.walletBalance + amount
         };
-        
-        // Update localStorage too
-        localStorage.setItem('smartCafeteriaUser', JSON.stringify(updatedUser));
-        
-        return updatedUser;
       });
       
       // Add transaction
@@ -612,16 +585,10 @@ export const AppProvider: React.FC<{children: React.ReactNode}> = ({ children })
       // In a real app, this would be an API call
       setUser(currentUser => {
         if (!currentUser) return null;
-        
-        const updatedUser = {
+        return {
           ...currentUser,
           walletBalance: currentUser.walletBalance - amount
         };
-        
-        // Update localStorage too
-        localStorage.setItem('smartCafeteriaUser', JSON.stringify(updatedUser));
-        
-        return updatedUser;
       });
       
       // Add transaction

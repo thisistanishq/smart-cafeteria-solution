@@ -16,8 +16,7 @@ export const mockMenuItems: MenuItem[] = [
     calories: 250,
     tags: ['popular', 'spicy', 'vegetarian'],
     rating: 4.8,
-    totalOrders: 1200,
-    veg: true
+    totalOrders: 1200
   },
   {
     id: 'item-2',
@@ -32,8 +31,7 @@ export const mockMenuItems: MenuItem[] = [
     calories: 180,
     tags: ['classic', 'vegetarian', 'healthy'],
     rating: 4.5,
-    totalOrders: 980,
-    veg: true
+    totalOrders: 980
   },
   {
     id: 'item-3',
@@ -48,8 +46,7 @@ export const mockMenuItems: MenuItem[] = [
     calories: 310,
     tags: ['hearty', 'vegetarian', 'traditional'],
     rating: 4.3,
-    totalOrders: 650,
-    veg: true
+    totalOrders: 650
   },
   
   // Lunch items
@@ -66,8 +63,7 @@ export const mockMenuItems: MenuItem[] = [
     calories: 750,
     tags: ['complete meal', 'vegetarian', 'traditional'],
     rating: 4.7,
-    totalOrders: 850,
-    veg: true
+    totalOrders: 850
   },
   {
     id: 'item-5',
@@ -82,8 +78,7 @@ export const mockMenuItems: MenuItem[] = [
     calories: 450,
     tags: ['spicy', 'non-vegetarian', 'popular'],
     rating: 4.6,
-    totalOrders: 720,
-    veg: false
+    totalOrders: 720
   },
   {
     id: 'item-6',
@@ -98,8 +93,7 @@ export const mockMenuItems: MenuItem[] = [
     calories: 380,
     tags: ['spicy', 'vegetarian', 'complete meal'],
     rating: 4.4,
-    totalOrders: 580,
-    veg: true
+    totalOrders: 580
   },
   
   // Dinner items
@@ -116,8 +110,7 @@ export const mockMenuItems: MenuItem[] = [
     calories: 320,
     tags: ['Kerala cuisine', 'light', 'dinner'],
     rating: 4.7,
-    totalOrders: 490,
-    veg: true
+    totalOrders: 490
   },
   {
     id: 'item-8',
@@ -132,8 +125,7 @@ export const mockMenuItems: MenuItem[] = [
     calories: 650,
     tags: ['special', 'non-vegetarian', 'popular'],
     rating: 4.9,
-    totalOrders: 1100,
-    veg: false
+    totalOrders: 1100
   },
   
   // Snacks
@@ -150,15 +142,14 @@ export const mockMenuItems: MenuItem[] = [
     calories: 220,
     tags: ['crispy', 'vegetarian', 'snack'],
     rating: 4.5,
-    totalOrders: 820,
-    veg: true
+    totalOrders: 820
   },
   {
     id: 'item-10',
     name: 'Mysore Pak',
     description: 'Traditional sweet made with gram flour, sugar, and ghee',
     price: 25,
-    category: 'dessert',
+    category: 'desserts',
     imageUrl: 'https://res.cloudinary.com/dj5yf0qgw/image/upload/v1629880658/south-indian/mysore-pak_cbstod.jpg',
     ingredients: ['Gram flour', 'Sugar', 'Ghee'],
     status: 'available',
@@ -166,8 +157,7 @@ export const mockMenuItems: MenuItem[] = [
     calories: 180,
     tags: ['sweet', 'traditional', 'vegetarian'],
     rating: 4.6,
-    totalOrders: 750,
-    veg: true
+    totalOrders: 750
   },
   
   // Beverages
@@ -176,7 +166,7 @@ export const mockMenuItems: MenuItem[] = [
     name: 'Filter Coffee',
     description: 'Traditional South Indian coffee with frothy milk',
     price: 30,
-    category: 'beverage',
+    category: 'beverages',
     imageUrl: 'https://res.cloudinary.com/dj5yf0qgw/image/upload/v1629880658/south-indian/filter-coffee_gq84qm.jpg',
     ingredients: ['Coffee powder', 'Milk', 'Sugar'],
     status: 'available',
@@ -184,15 +174,14 @@ export const mockMenuItems: MenuItem[] = [
     calories: 90,
     tags: ['hot', 'beverage', 'popular'],
     rating: 4.8,
-    totalOrders: 1500,
-    veg: true
+    totalOrders: 1500
   },
   {
     id: 'item-12',
     name: 'Tender Coconut Water',
     description: 'Fresh coconut water served in its shell',
     price: 40,
-    category: 'beverage',
+    category: 'beverages',
     imageUrl: 'https://res.cloudinary.com/dj5yf0qgw/image/upload/v1629880659/south-indian/tender-coconut_tzbgdh.jpg',
     ingredients: ['Fresh coconut water'],
     status: 'available',
@@ -200,7 +189,6 @@ export const mockMenuItems: MenuItem[] = [
     calories: 45,
     tags: ['refreshing', 'natural', 'healthy'],
     rating: 4.7,
-    totalOrders: 920,
-    veg: true
+    totalOrders: 920
   }
 ];

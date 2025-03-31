@@ -1,10 +1,10 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import "https://deno.land/x/xhr@0.1.0/mod.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type'
 };
 
 serve(async (req) => {
@@ -15,67 +15,44 @@ serve(async (req) => {
 
   try {
     const { message, chatHistory } = await req.json();
-
-    if (!message) {
-      return new Response(
-        JSON.stringify({ error: 'No message provided' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Here we would normally call an actual AI service like OpenAI
-    // But for now, we'll implement a rules-based approach
     
-    const lowerMsg = message.toLowerCase();
-    let response = '';
+    // For now, we'll use a simple rule-based response system
+    // In a production app, you would connect to OpenAI or another AI service
     
-    // Check for food order intents
-    if (lowerMsg.includes('order') || lowerMsg.includes('get') || lowerMsg.includes('want')) {
-      if (lowerMsg.includes('dosa') || lowerMsg.includes('masala dosa')) {
-        response = "I can add Masala Dosa to your cart. Would you like me to do that for you?";
-      } else if (lowerMsg.includes('idli') || lowerMsg.includes('idly')) {
-        response = "I'd be happy to add Idli Sambar to your cart. Should I proceed?";
-      } else if (lowerMsg.includes('coffee')) {
-        response = "Our Filter Coffee is very popular. I can add it to your cart if you'd like?";
-      } else {
-        response = "What specific food items would you like to order? We have South Indian specialties like Dosa, Idli, and more.";
-      }
+    const lowerMessage = message.toLowerCase();
+    let response = "";
+    
+    if (lowerMessage.includes("menu") || lowerMessage.includes("food")) {
+      response = "Our menu features a variety of delicious options! You can check out our popular items on the Menu page. Would you like me to recommend something?";
+    } else if (lowerMessage.includes("hours") || lowerMessage.includes("open")) {
+      response = "We're open Monday through Friday from 7:30 AM to 8:00 PM, and weekends from 9:00 AM to 6:00 PM.";
+    } else if (lowerMessage.includes("payment") || lowerMessage.includes("pay")) {
+      response = "We accept all major credit cards, digital wallets like Apple Pay and Google Pay, as well as payments through our app wallet system!";
+    } else if (lowerMessage.includes("order") || lowerMessage.includes("delivery")) {
+      response = "You can place orders through our app and pick them up at the counter. We're working on a delivery service that will be available soon!";
+    } else if (lowerMessage.includes("recommend") || lowerMessage.includes("suggestion")) {
+      response = "Based on popular choices today, I'd recommend trying our Chef's Special Curry Bowl or the Mediterranean Salad with Falafel!";
+    } else {
+      response = "Thank you for reaching out! If you have questions about our menu, hours, ordering, or payments, feel free to ask. How can I help you today?";
     }
     
-    // Check for dietary restrictions
-    else if (lowerMsg.includes('diabetes') || lowerMsg.includes('diabetic')) {
-      response = "For people with diabetes, I recommend lower carb options like Rasam, Vegetable Curry without rice, or small portions of Idli. These items have a lower glycemic index.";
-    }
+    // Add the new messages to the chat history
+    const updatedHistory = [
+      ...chatHistory,
+      { role: "user", content: message },
+      { role: "assistant", content: response }
+    ];
     
-    // Check for recommendations
-    else if (lowerMsg.includes('recommend') || lowerMsg.includes('suggestion') || lowerMsg.includes('popular')) {
-      response = "Based on our most popular items, I recommend Masala Dosa, Hyderabadi Biryani, and Filter Coffee. These are customer favorites!";
-    }
-    
-    // Check for vegetarian options
-    else if (lowerMsg.includes('vegetarian') || lowerMsg.includes('veg')) {
-      response = "We have many vegetarian options! Our Masala Dosa, Idli Sambar, and Pongal are excellent vegetarian choices that are very popular.";
-    }
-    
-    // Check for spicy food
-    else if (lowerMsg.includes('spicy')) {
-      response = "If you enjoy spicy food, try our Chettinad Chicken Curry, Bisi Bele Bath, or our spicy Masala Dosa. These are known for their vibrant flavors and heat!";
-    }
-    
-    // Default response
-    else {
-      response = "I can help you find food items, make recommendations based on dietary preferences, or answer questions about our menu. Is there something specific you're looking for?";
-    }
-
-    return new Response(
-      JSON.stringify({ message: response }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return new Response(JSON.stringify({ 
+      response, 
+      updatedHistory 
+    }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
   } catch (error) {
-    console.error('Error processing chat:', error);
-    return new Response(
-      JSON.stringify({ error: 'Failed to process message' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 400,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
   }
 });

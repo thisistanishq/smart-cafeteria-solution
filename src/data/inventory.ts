@@ -8,9 +8,7 @@ export const mockInventory: InventoryItem[] = [
     category: 'Grains',
     quantity: 25,
     unit: 'kg',
-    threshold: 5,
     thresholdLevel: 5,
-    costPerUnit: 60,
     cost: 60,
     supplier: 'Local Farmers Co-op',
     lastRestocked: '2023-07-01T10:00:00Z'
@@ -21,9 +19,7 @@ export const mockInventory: InventoryItem[] = [
     category: 'Lentils',
     quantity: 10,
     unit: 'kg',
-    threshold: 2,
     thresholdLevel: 2,
-    costPerUnit: 120,
     cost: 120,
     supplier: 'Organic Pulses Ltd',
     lastRestocked: '2023-07-02T14:00:00Z'
@@ -34,9 +30,7 @@ export const mockInventory: InventoryItem[] = [
     category: 'Vegetables',
     quantity: 15,
     unit: 'kg',
-    threshold: 3,
     thresholdLevel: 3,
-    costPerUnit: 40,
     cost: 40,
     supplier: 'Fresh Veggies Market',
     lastRestocked: '2023-07-05T09:30:00Z'
@@ -47,9 +41,7 @@ export const mockInventory: InventoryItem[] = [
     category: 'Fruits',
     quantity: 30,
     unit: 'pieces',
-    threshold: 5,
     thresholdLevel: 5,
-    costPerUnit: 25,
     cost: 25,
     supplier: 'Tropical Fruits Inc',
     lastRestocked: '2023-07-03T11:00:00Z'
@@ -60,9 +52,7 @@ export const mockInventory: InventoryItem[] = [
     category: 'Beverages',
     quantity: 5,
     unit: 'kg',
-    threshold: 1,
     thresholdLevel: 1,
-    costPerUnit: 450,
     cost: 450,
     supplier: 'South Indian Coffee Co',
     lastRestocked: '2023-06-28T15:30:00Z'
@@ -73,9 +63,7 @@ export const mockInventory: InventoryItem[] = [
     category: 'Meat',
     quantity: 8,
     unit: 'kg',
-    threshold: 2,
     thresholdLevel: 2,
-    costPerUnit: 320,
     cost: 320,
     supplier: 'Fresh Poultry Farm',
     lastRestocked: '2023-07-04T08:00:00Z'
@@ -86,9 +74,7 @@ export const mockInventory: InventoryItem[] = [
     category: 'Grains',
     quantity: 12,
     unit: 'kg',
-    threshold: 3,
     thresholdLevel: 3,
-    costPerUnit: 180,
     cost: 180,
     supplier: 'Premium Grains Ltd',
     lastRestocked: '2023-07-01T12:30:00Z'
@@ -99,9 +85,7 @@ export const mockInventory: InventoryItem[] = [
     category: 'Dairy',
     quantity: 4,
     unit: 'liter',
-    threshold: 1,
     thresholdLevel: 1,
-    costPerUnit: 650,
     cost: 650,
     supplier: 'Traditional Dairy Products',
     lastRestocked: '2023-06-30T14:00:00Z'
@@ -112,9 +96,7 @@ export const mockInventory: InventoryItem[] = [
     category: 'Vegetables',
     quantity: 7,
     unit: 'kg',
-    threshold: 2,
     thresholdLevel: 2,
-    costPerUnit: 60,
     cost: 60,
     supplier: 'Fresh Veggies Market',
     lastRestocked: '2023-07-05T09:30:00Z'
@@ -125,9 +107,7 @@ export const mockInventory: InventoryItem[] = [
     category: 'Spices',
     quantity: 3,
     unit: 'kg',
-    threshold: 1,
     thresholdLevel: 1,
-    costPerUnit: 850,
     cost: 850,
     supplier: 'Traditional Spices Co',
     lastRestocked: '2023-06-25T10:00:00Z'
