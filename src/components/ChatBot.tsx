@@ -3,7 +3,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { MessageCircle, X, Send, Zap, Bot, ShoppingCart, Wallet } from 'lucide-react';
-import { aiService } from '@/services/supabase';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useApp } from '@/context/AppContext';
 import { useNavigate } from 'react-router-dom';
@@ -105,7 +104,7 @@ export const ChatBot: React.FC<ChatBotProps> = ({ onClose }) => {
         .filter(item => 
           item.tags?.includes('low-sugar') || 
           item.tags?.includes('diabetic-friendly') ||
-          (item.category !== 'dessert' && item.category !== 'sweet')
+          (item.category !== "dessert" && item.category !== "sweet")
         )
         .slice(0, 3);
       

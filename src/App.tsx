@@ -40,15 +40,7 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <AppProvider>
       <TooltipProvider>
-        <Toaster 
-          toastOptions={{
-            style: {
-              background: '#192244',
-              color: '#e6eaf4',
-              border: '1px solid #384374',
-            },
-          }}
-        />
+        <Toaster />
         <Sonner 
           theme="dark"
           toastOptions={{

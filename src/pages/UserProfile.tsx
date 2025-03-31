@@ -2,52 +2,109 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { NavBar } from '@/components/NavBar';
-import { Footer } from '@/components/Footer';
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardFooter, 
-  CardHeader, 
-  CardTitle 
-} from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { useApp } from '@/context/AppContext';
 import { 
   User, 
   Mail, 
-  MapPin, 
   Phone, 
-  CreditCard, 
-  ShoppingCart, 
-  ClipboardList,
-  Home
+  Shield, 
+  Calendar, 
+  BookOpen, 
+  Settings, 
+  LogOut,
+  Wallet
 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
+import { NavBar } from '@/components/NavBar';
+import { Footer } from '@/components/Footer';
+import { Separator } from '@/components/ui/separator';
+import { Loader } from '@/components/Loader';
+import { useApp } from '@/context/AppContext';
+import { MobileNavBar } from '@/components/MobileNavBar';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { CookingAnimation } from '@/components/CookingAnimation';
 
 const UserProfile = () => {
-  const { user } = useApp();
-  const { toast } = useToast();
+  const { user, isLoading, logout } = useApp();
   const navigate = useNavigate();
+  const { toast } = useToast();
+  const isMobile = useIsMobile();
+  const [activeTab, setActiveTab] = useState<'personal' | 'preferences'>('personal');
+  const [cookingType, setCookingType] = useState<'dosa' | 'idli' | 'biryani' | 'poori' | 'friedrice'>('dosa');
+  
+  // Cycle through cooking animations
+  useEffect(() => {
+    const animations: Array<'dosa' | 'idli' | 'biryani' | 'poori' | 'friedrice'> = ['dosa', 'idli', 'biryani', 'poori', 'friedrice'];
+    let currentIndex = 0;
+    
+    const intervalId = setInterval(() => {
+      currentIndex = (currentIndex + 1) % animations.length;
+      setCookingType(animations[currentIndex]);
+    }, 5000);
+    
+    return () => clearInterval(intervalId);
+  }, []);
+  
+  const handleLogout = async () => {
+    try {
+      await logout();
+      navigate('/login');
+      toast({
+        title: "Logged out successfully",
+        description: "You have been logged out of your account",
+      });
+    } catch (error) {
+      console.error('Logout error:', error);
+      toast({
+        title: "Logout Error",
+        description: "There was a problem logging out. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+  
+  if (isLoading) {
+    return <Loader text="Loading profile..." />;
+  }
   
   if (!user) {
-    useEffect(() => {
-      navigate('/login');
-    }, [navigate]);
-    
-    return null;
+    return (
+      <div className="min-h-screen flex flex-col">
+        {!isMobile && <NavBar />}
+        <div className="flex-grow flex flex-col items-center justify-center p-6">
+          <div className="text-center max-w-md">
+            <User className="h-16 w-16 mx-auto mb-4 text-gray-400" />
+            <h1 className="text-2xl font-bold mb-2">Not Logged In</h1>
+            <p className="text-gray-500 mb-6">
+              Please log in to view your profile and manage your account.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <Button 
+                className="bg-turmeric-500 hover:bg-turmeric-600"
+                onClick={() => navigate('/login')}
+              >
+                Log In
+              </Button>
+              <Button 
+                variant="outline"
+                onClick={() => navigate('/register')}
+              >
+                Register
+              </Button>
+            </div>
+          </div>
+        </div>
+        {isMobile ? <MobileNavBar /> : <Footer />}
+      </div>
+    );
   }
-
-  // Default phone if not available
-  const phoneNumber = user.phone || '+91 98765 43210';
   
+  // Animation variants for profile sections
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
       opacity: 1,
       transition: {
-        when: "beforeChildren",
         staggerChildren: 0.1
       }
     }
@@ -61,256 +118,331 @@ const UserProfile = () => {
       transition: {
         type: "spring",
         stiffness: 300,
-        damping: 20
+        damping: 30
       }
     }
   };
-  
-  const statsVariants = {
-    hidden: { scale: 0.9, opacity: 0 },
-    visible: {
-      scale: 1,
-      opacity: 1,
-      transition: {
-        type: "spring", 
-        stiffness: 300,
-        damping: 20
-      }
-    }
-  };
-  
-  const stats = [
-    { 
-      label: 'Total Orders', 
-      value: 12, 
-      icon: ShoppingCart,
-      color: 'bg-[#192244] text-blue-200'
-    },
-    { 
-      label: 'Points Earned', 
-      value: 450, 
-      icon: CreditCard,
-      color: 'bg-[#192244] text-green-200'
-    },
-    { 
-      label: 'Referrals', 
-      value: 3, 
-      icon: User,
-      color: 'bg-[#192244] text-purple-200'
-    }
-  ];
   
   return (
-    <>
-      <NavBar />
-      <div className="min-h-screen bg-[#131b38] text-gray-100 pt-20 pb-16">
-        <motion.div 
-          className="cafeteria-container space-y-6"
-          variants={containerVariants}
-          initial="hidden"
-          animate="visible"
-        >
-          <div className="flex flex-col md:flex-row gap-6">
-            {/* Profile Card */}
-            <motion.div variants={itemVariants} className="w-full md:w-1/3">
-              <Card className="bg-[#192244] border-[#384374] text-gray-100 overflow-hidden">
-                <div className="h-32 bg-gradient-to-r from-[#212a4e] to-[#1e2e64]" />
-                <CardContent className="-mt-16 relative">
-                  <div className="flex flex-col items-center">
-                    <div className="w-28 h-28 rounded-full bg-[#384374] border-4 border-[#192244] overflow-hidden mb-3">
-                      {user.profileImageUrl ? (
-                        <img 
-                          src={user.profileImageUrl} 
-                          alt={user.name} 
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-[#212a4e]">
-                          <User className="w-12 h-12 text-gray-100" />
+    <div className="min-h-screen flex flex-col bg-gradient-to-b from-[#0c1329] to-[#131b38]">
+      {!isMobile && <NavBar />}
+      
+      <main className="flex-grow p-6 md:p-8">
+        <div className="max-w-5xl mx-auto">
+          <motion.div
+            initial="hidden"
+            animate="visible"
+            variants={containerVariants}
+            className="mb-8"
+          >
+            <motion.h1 
+              variants={itemVariants}
+              className="text-3xl font-bold mb-2 text-white"
+            >
+              My Profile
+            </motion.h1>
+            <motion.p 
+              variants={itemVariants}
+              className="text-gray-400"
+            >
+              Manage your personal information and preferences
+            </motion.p>
+          </motion.div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {/* User Card */}
+            <motion.div
+              initial={{ x: -50, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              transition={{ type: "spring", damping: 20 }}
+            >
+              <div className="rounded-xl overflow-hidden bg-[#192244] border border-[#384374] shadow-xl text-white">
+                <div className="relative h-32 bg-[#212a4e]">
+                  <div className="absolute top-0 left-0 w-full h-full opacity-40 bg-gradient-to-br from-[#4a5680] to-transparent"></div>
+                  
+                  {/* Decorative elements */}
+                  <div className="absolute top-3 left-3 w-16 h-16 rounded-full bg-[#4a5680] opacity-20"></div>
+                  <div className="absolute bottom-3 right-3 w-8 h-8 rounded-full bg-[#4a5680] opacity-20"></div>
+                </div>
+                
+                <div className="relative px-6 pb-6">
+                  <div className="absolute -top-12 left-6">
+                    <div className="w-24 h-24 rounded-full bg-[#131b38] border-4 border-[#192244] flex items-center justify-center">
+                      <User className="h-12 w-12 text-white" strokeWidth={1.5} />
+                    </div>
+                  </div>
+                  
+                  <div className="pt-16">
+                    <h2 className="text-xl font-bold">{user.name}</h2>
+                    <p className="text-gray-400 flex items-center mt-1">
+                      <Shield className="h-4 w-4 mr-1" />
+                      {user.role.replace('_', ' ').charAt(0).toUpperCase() + user.role.replace('_', ' ').slice(1)}
+                    </p>
+                    
+                    <Separator className="my-4 bg-[#384374]" />
+                    
+                    <div className="space-y-3">
+                      <div className="flex items-center">
+                        <Mail className="h-4 w-4 mr-3 text-[#4a5680]" />
+                        <p className="text-sm">{user.email}</p>
+                      </div>
+                      {user.phone && (
+                        <div className="flex items-center">
+                          <Phone className="h-4 w-4 mr-3 text-[#4a5680]" />
+                          <p className="text-sm">{user.phone}</p>
                         </div>
                       )}
-                    </div>
-                    <h3 className="text-xl font-bold mt-2">{user.name}</h3>
-                    <p className="text-sm text-gray-300 capitalize">{user.role.replace('_', ' ')}</p>
-                    
-                    <div className="w-full space-y-3 mt-6">
-                      <div className="flex items-center text-gray-300">
-                        <Mail className="w-4 h-4 mr-2" />
-                        <span className="text-sm">{user.email}</span>
+                      <div className="flex items-center">
+                        <Wallet className="h-4 w-4 mr-3 text-[#4a5680]" />
+                        <p className="text-sm">₹{user.walletBalance.toFixed(2)}</p>
                       </div>
-                      <div className="flex items-center text-gray-300">
-                        <Phone className="w-4 h-4 mr-2" />
-                        <span className="text-sm">{phoneNumber}</span>
-                      </div>
-                      <div className="flex items-center text-gray-300">
-                        <MapPin className="w-4 h-4 mr-2" />
-                        <span className="text-sm">Campus Area, Room 203</span>
+                      <div className="flex items-center">
+                        <Calendar className="h-4 w-4 mr-3 text-[#4a5680]" />
+                        <p className="text-sm">Joined {new Date().toLocaleDateString()}</p>
                       </div>
                     </div>
                     
-                    <div className="flex justify-center w-full mt-6">
-                      <Button className="w-full bg-[#212a4e] hover:bg-[#2d375f] text-white">
+                    <div className="mt-6">
+                      <Button 
+                        variant="outline" 
+                        className="w-full border-[#384374] hover:bg-[#2d375f]"
+                        onClick={handleLogout}
+                      >
+                        <LogOut className="h-4 w-4 mr-2" />
+                        Logout
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+            
+            {/* Main Content */}
+            <motion.div 
+              className="md:col-span-2"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.2 }}
+            >
+              {/* Tabs */}
+              <div className="flex border-b border-[#384374] mb-6">
+                <button
+                  className={`py-3 px-6 font-medium text-sm ${
+                    activeTab === 'personal' 
+                      ? 'text-white border-b-2 border-[#4a5680]' 
+                      : 'text-gray-400 hover:text-white'
+                  }`}
+                  onClick={() => setActiveTab('personal')}
+                >
+                  Personal Information
+                </button>
+                <button
+                  className={`py-3 px-6 font-medium text-sm ${
+                    activeTab === 'preferences' 
+                      ? 'text-white border-b-2 border-[#4a5680]' 
+                      : 'text-gray-400 hover:text-white'
+                  }`}
+                  onClick={() => setActiveTab('preferences')}
+                >
+                  Preferences
+                </button>
+              </div>
+              
+              {/* Personal Info Tab */}
+              {activeTab === 'personal' && (
+                <motion.div 
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="space-y-6 text-white"
+                >
+                  <div className="bg-[#192244] rounded-xl p-6 border border-[#384374]">
+                    <h3 className="text-lg font-medium mb-4 flex items-center">
+                      <User className="h-5 w-5 mr-2" />
+                      Account Details
+                    </h3>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <label className="text-sm text-gray-400 block mb-1">Full Name</label>
+                        <div className="bg-[#131b38] p-3 rounded-md border border-[#384374]">
+                          {user.name}
+                        </div>
+                      </div>
+                      <div>
+                        <label className="text-sm text-gray-400 block mb-1">Email Address</label>
+                        <div className="bg-[#131b38] p-3 rounded-md border border-[#384374]">
+                          {user.email}
+                        </div>
+                      </div>
+                      <div>
+                        <label className="text-sm text-gray-400 block mb-1">Phone Number</label>
+                        <div className="bg-[#131b38] p-3 rounded-md border border-[#384374]">
+                          {user.phone || 'Not provided'}
+                        </div>
+                      </div>
+                      <div>
+                        <label className="text-sm text-gray-400 block mb-1">Role</label>
+                        <div className="bg-[#131b38] p-3 rounded-md border border-[#384374]">
+                          {user.role.replace('_', ' ').charAt(0).toUpperCase() + user.role.replace('_', ' ').slice(1)}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="mt-6">
+                      <Button 
+                        variant="outline" 
+                        className="border-[#384374] hover:bg-[#2d375f]"
+                      >
+                        <Settings className="h-4 w-4 mr-2" />
                         Edit Profile
                       </Button>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-              
-              <motion.div variants={itemVariants} className="mt-6">
-                <Card className="bg-[#192244] border-[#384374] text-gray-100">
-                  <CardHeader>
-                    <CardTitle className="text-lg">Wallet Balance</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex items-center justify-between">
+                  
+                  <div className="bg-[#192244] rounded-xl p-6 border border-[#384374]">
+                    <h3 className="text-lg font-medium mb-4 flex items-center">
+                      <Wallet className="h-5 w-5 mr-2" />
+                      Wallet
+                    </h3>
+                    
+                    <div className="flex flex-col md:flex-row md:items-center md:justify-between">
                       <div>
-                        <p className="text-3xl font-bold">₹{user.walletBalance || 0}</p>
-                        <p className="text-sm text-gray-300">Available Balance</p>
+                        <p className="text-sm text-gray-400 mb-1">Current Balance</p>
+                        <p className="text-3xl font-bold">₹{user.walletBalance.toFixed(2)}</p>
                       </div>
+                      
                       <Button 
-                        className="bg-[#212a4e] hover:bg-[#2d375f]"
+                        className="mt-4 md:mt-0 bg-[#212a4e] hover:bg-[#2d375f]"
                         onClick={() => navigate('/wallet')}
                       >
-                        Top Up
+                        Manage Wallet
                       </Button>
                     </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
+                  </div>
+                  
+                  {/* Cooking Animation Card */}
+                  <div className="bg-[#192244] rounded-xl p-6 border border-[#384374]">
+                    <h3 className="text-lg font-medium mb-4 flex items-center">
+                      <BookOpen className="h-5 w-5 mr-2" />
+                      Today's Special
+                    </h3>
+                    
+                    <div className="h-64 flex items-center justify-center">
+                      <CookingAnimation type={cookingType} className="h-full w-full" />
+                    </div>
+                    
+                    <div className="mt-4 text-center">
+                      <Button 
+                        className="bg-[#212a4e] hover:bg-[#2d375f]"
+                        onClick={() => navigate('/menu')}
+                      >
+                        Explore Menu
+                      </Button>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+              
+              {/* Preferences Tab */}
+              {activeTab === 'preferences' && (
+                <motion.div 
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="space-y-6 text-white"
+                >
+                  <div className="bg-[#192244] rounded-xl p-6 border border-[#384374]">
+                    <h3 className="text-lg font-medium mb-4">Notification Preferences</h3>
+                    
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <label className="flex-grow">
+                          <span className="text-sm">Order Updates</span>
+                        </label>
+                        <input 
+                          type="checkbox" 
+                          className="w-5 h-5 rounded accent-[#4a5680]" 
+                          defaultChecked
+                        />
+                      </div>
+                      
+                      <div className="flex items-center justify-between">
+                        <label className="flex-grow">
+                          <span className="text-sm">Special Offers</span>
+                        </label>
+                        <input 
+                          type="checkbox" 
+                          className="w-5 h-5 rounded accent-[#4a5680]" 
+                          defaultChecked
+                        />
+                      </div>
+                      
+                      <div className="flex items-center justify-between">
+                        <label className="flex-grow">
+                          <span className="text-sm">New Menu Items</span>
+                        </label>
+                        <input 
+                          type="checkbox" 
+                          className="w-5 h-5 rounded accent-[#4a5680]" 
+                          defaultChecked
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-[#192244] rounded-xl p-6 border border-[#384374]">
+                    <h3 className="text-lg font-medium mb-4">Dietary Preferences</h3>
+                    
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <label className="flex-grow">
+                          <span className="text-sm">Vegetarian</span>
+                        </label>
+                        <input 
+                          type="checkbox" 
+                          className="w-5 h-5 rounded accent-[#4a5680]" 
+                        />
+                      </div>
+                      
+                      <div className="flex items-center justify-between">
+                        <label className="flex-grow">
+                          <span className="text-sm">Vegan</span>
+                        </label>
+                        <input 
+                          type="checkbox" 
+                          className="w-5 h-5 rounded accent-[#4a5680]" 
+                        />
+                      </div>
+                      
+                      <div className="flex items-center justify-between">
+                        <label className="flex-grow">
+                          <span className="text-sm">Gluten-Free</span>
+                        </label>
+                        <input 
+                          type="checkbox" 
+                          className="w-5 h-5 rounded accent-[#4a5680]" 
+                        />
+                      </div>
+                      
+                      <div className="flex items-center justify-between">
+                        <label className="flex-grow">
+                          <span className="text-sm">Low-Sugar</span>
+                        </label>
+                        <input 
+                          type="checkbox" 
+                          className="w-5 h-5 rounded accent-[#4a5680]" 
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
             </motion.div>
-            
-            {/* Right Column */}
-            <div className="w-full md:w-2/3 space-y-6">
-              {/* Stats */}
-              <motion.div 
-                variants={itemVariants} 
-                className="grid grid-cols-1 md:grid-cols-3 gap-4"
-              >
-                {stats.map((stat, i) => (
-                  <motion.div 
-                    key={stat.label}
-                    variants={statsVariants}
-                    whileHover={{ y: -5, transition: { duration: 0.2 } }}
-                  >
-                    <Card className="bg-[#192244] border-[#384374] text-gray-100">
-                      <CardContent className="pt-6">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-xl font-bold">{stat.value}</p>
-                            <p className="text-sm text-gray-300">{stat.label}</p>
-                          </div>
-                          <div className={`w-12 h-12 rounded-lg ${stat.color} flex items-center justify-center`}>
-                            <stat.icon className="w-6 h-6" />
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </motion.div>
-                ))}
-              </motion.div>
-              
-              {/* Recent Orders */}
-              <motion.div variants={itemVariants}>
-                <Card className="bg-[#192244] border-[#384374] text-gray-100">
-                  <CardHeader>
-                    <CardTitle>Recent Orders</CardTitle>
-                    <CardDescription className="text-gray-400">Your latest 5 orders</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      {[1, 2, 3].map((order) => (
-                        <div 
-                          key={order} 
-                          className="border border-[#384374] rounded-lg p-4 hover:bg-[#212a4e] transition-colors cursor-pointer"
-                          onClick={() => navigate(`/orders/${1000 + order}`)}
-                        >
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <h4 className="font-medium">Order #{1000 + order}</h4>
-                              <p className="text-sm text-gray-400">3 items • ₹270</p>
-                            </div>
-                            <div className="text-right">
-                              <span className="inline-block px-2 py-1 text-xs rounded-full bg-green-900 text-green-300">
-                                Delivered
-                              </span>
-                              <p className="text-xs text-gray-400 mt-1">June {15 + order}, 2023</p>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                  <CardFooter>
-                    <Button 
-                      variant="outline" 
-                      className="w-full border-[#384374] text-gray-300 hover:bg-[#212a4e] hover:text-white"
-                      onClick={() => navigate('/orders')}
-                    >
-                      <ClipboardList className="mr-2 h-4 w-4" />
-                      View All Orders
-                    </Button>
-                  </CardFooter>
-                </Card>
-              </motion.div>
-              
-              {/* Favorite Items */}
-              <motion.div variants={itemVariants}>
-                <Card className="bg-[#192244] border-[#384374] text-gray-100">
-                  <CardHeader>
-                    <CardTitle>Favorite Items</CardTitle>
-                    <CardDescription className="text-gray-400">Your most ordered items</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      {['Masala Dosa', 'Veg Biryani', 'Butter Naan'].map((item, i) => (
-                        <div 
-                          key={item} 
-                          className="flex items-center gap-4 border border-[#384374] rounded-lg p-3 hover:bg-[#212a4e] transition-colors cursor-pointer"
-                          onClick={() => navigate('/menu')}
-                        >
-                          <div className="w-12 h-12 bg-[#212a4e] rounded-md flex items-center justify-center">
-                            <img 
-                              src={`/lovable-uploads/d23f9918-aa8f-4001-bfd2-86661da535f5.png`}
-                              alt={item}
-                              className="w-10 h-10 object-cover rounded"
-                            />
-                          </div>
-                          <div>
-                            <h4 className="font-medium">{item}</h4>
-                            <p className="text-xs text-gray-400">Ordered {5 - i} times</p>
-                          </div>
-                          <div className="ml-auto flex items-center text-gray-300">
-                            <Button 
-                              variant="ghost" 
-                              size="sm"
-                              className="hover:bg-[#2d375f] hover:text-white rounded-full h-8 w-8 p-0"
-                            >
-                              <ShoppingCart className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                  <CardFooter>
-                    <Button 
-                      variant="outline" 
-                      className="w-full border-[#384374] text-gray-300 hover:bg-[#212a4e] hover:text-white"
-                      onClick={() => navigate('/menu')}
-                    >
-                      <Home className="mr-2 h-4 w-4" />
-                      Browse Full Menu
-                    </Button>
-                  </CardFooter>
-                </Card>
-              </motion.div>
-            </div>
           </div>
-        </motion.div>
-      </div>
-      <Footer />
-    </>
+        </div>
+      </main>
+      
+      {isMobile ? <MobileNavBar /> : <Footer />}
+    </div>
   );
 };
 

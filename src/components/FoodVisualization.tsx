@@ -1,19 +1,17 @@
 
-import React, { useRef, useEffect } from 'react';
+import React, { useRef } from 'react';
+import { Canvas, useFrame } from '@react-three/fiber';
+import { OrbitControls, Text, useTexture } from '@react-three/drei';
 import * as THREE from 'three';
-import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { OrbitControls, useTexture, Text } from '@react-three/drei';
 
 interface FoodVisualizationProps {
   className?: string;
 }
 
 // Food item that floats and rotates
-const FloatingFood = ({ position, scale, rotation, textureUrl, name }) => {
+const FloatingFood = ({ position, scale, rotation, textureUrl, name }: any) => {
   const meshRef = useRef<THREE.Mesh>(null);
-  const materialRef = useRef<THREE.MeshStandardMaterial>(null);
-  
-  const texture = useTexture(textureUrl);
+  const textureMap = useTexture(textureUrl);
   
   useFrame(({ clock }) => {
     if (meshRef.current) {
@@ -31,8 +29,7 @@ const FloatingFood = ({ position, scale, rotation, textureUrl, name }) => {
       <mesh ref={meshRef} castShadow receiveShadow>
         <boxGeometry args={[1, 1, 1]} />
         <meshStandardMaterial 
-          ref={materialRef}
-          map={texture} 
+          map={textureMap} 
           roughness={0.5} 
           metalness={0.2}
         />
@@ -51,11 +48,11 @@ const FloatingFood = ({ position, scale, rotation, textureUrl, name }) => {
 };
 
 // Steam particle system
-const SteamParticles = ({ position }) => {
+const SteamParticles = ({ position }: any) => {
   const particlesRef = useRef<THREE.Points>(null);
-  const particlesGeometryRef = useRef<THREE.BufferGeometry>(null);
+  const particlesGeometryRef = useRef<THREE.BufferGeometry>(new THREE.BufferGeometry());
   
-  useEffect(() => {
+  React.useEffect(() => {
     if (particlesGeometryRef.current) {
       const particleCount = 50;
       const positions = new Float32Array(particleCount * 3);
@@ -233,7 +230,7 @@ const LightRays = () => {
 const Scene = () => {
   const { camera } = useThree();
   
-  useEffect(() => {
+  React.useEffect(() => {
     camera.position.set(0, 1, 5);
   }, [camera]);
   
