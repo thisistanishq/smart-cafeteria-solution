@@ -1,532 +1,423 @@
 
 import React, { useState, useRef } from 'react';
-import { useReactToPrint } from 'react-to-print';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { 
-  CreditCard, 
-  Search, 
-  Filter, 
-  Download, 
-  Printer, 
-  CheckCircle, 
-  Clock, 
-  AlertCircle,
-  Receipt,
-  QrCode
-} from 'lucide-react';
-import { NavBar } from '@/components/NavBar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { useToast } from '@/hooks/use-toast';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Label } from '@/components/ui/label';
+import { NavBar } from '@/components/NavBar';
+import { useToast } from '@/hooks/use-toast';
+import { Plus, Minus, Trash2, Printer, Check } from 'lucide-react';
+import { useReactToPrint } from 'react-to-print';
 
-interface Order {
+type OrderItem = {
   id: string;
-  customer: string;
-  items: {
-    name: string;
-    price: number;
-    quantity: number;
-  }[];
-  total: number;
-  status: 'completed' | 'pending' | 'cancelled';
-  date: string;
-  time: string;
-  paymentMethod: string;
-  orderNumber: string;
-}
-
-const generateRandomOrderNumber = () => {
-  return Math.floor(10000 + Math.random() * 90000).toString();
+  name: string;
+  price: number;
+  quantity: number;
 };
 
+type Order = {
+  customer_id: string;
+  customer_name: string;
+  customer_email: string;
+  total_amount: number;
+  status: string;
+  payment_method: string;
+  payment_status: string;
+  special_instructions: string;
+};
+
+// Receipt component for printing
+const Receipt = React.forwardRef<HTMLDivElement, any>(({ orderData, customerName, totalAmount, paymentMethod }, ref) => {
+  return (
+    <div ref={ref} className="p-8 max-w-md mx-auto bg-white" style={{ display: 'none' }}>
+      <div className="text-center mb-6">
+        <h2 className="text-2xl font-bold">Smart Cafeteria</h2>
+        <p className="text-sm text-gray-600">Receipt</p>
+        <p className="text-sm text-gray-600">{new Date().toLocaleString()}</p>
+      </div>
+      
+      <div className="mb-4">
+        <p><strong>Customer:</strong> {customerName}</p>
+        <p><strong>Payment Method:</strong> {paymentMethod}</p>
+      </div>
+      
+      <table className="w-full mb-4">
+        <thead>
+          <tr className="border-b">
+            <th className="text-left py-2">Item</th>
+            <th className="text-center py-2">Qty</th>
+            <th className="text-right py-2">Price</th>
+            <th className="text-right py-2">Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          {orderData?.map((item: OrderItem) => (
+            <tr key={item.id} className="border-b">
+              <td className="py-2">{item.name}</td>
+              <td className="text-center py-2">{item.quantity}</td>
+              <td className="text-right py-2">₹{item.price.toFixed(2)}</td>
+              <td className="text-right py-2">₹{(item.price * item.quantity).toFixed(2)}</td>
+            </tr>
+          ))}
+        </tbody>
+        <tfoot>
+          <tr className="font-bold">
+            <td colSpan={3} className="text-right py-2">Total:</td>
+            <td className="text-right py-2">₹{totalAmount.toFixed(2)}</td>
+          </tr>
+        </tfoot>
+      </table>
+      
+      <div className="text-center text-sm text-gray-600 mt-8">
+        <p>Thank you for your order!</p>
+        <p>Visit us again soon!</p>
+      </div>
+    </div>
+  );
+});
+
 const StaffBilling = () => {
+  const [customerName, setCustomerName] = useState('');
+  const [customerEmail, setCustomerEmail] = useState('');
+  const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
+  const [paymentMethod, setPaymentMethod] = useState('cash');
+  const [specialInstructions, setSpecialInstructions] = useState('');
+  const [menuItems, setMenuItems] = useState<any[]>([
+    { id: '1', name: 'Butter Chicken', price: 250, available: true },
+    { id: '2', name: 'Paneer Tikka', price: 220, available: true },
+    { id: '3', name: 'Veg Biryani', price: 180, available: true },
+    { id: '4', name: 'Masala Dosa', price: 120, available: true },
+    { id: '5', name: 'Chole Bhature', price: 150, available: true },
+  ]);
+  const [selectedItemId, setSelectedItemId] = useState('');
+  
+  const navigate = useNavigate();
   const { toast } = useToast();
-  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [dateFilter, setDateFilter] = useState('');
-  const printBillRef = useRef<HTMLDivElement>(null);
+  const receiptRef = useRef<HTMLDivElement>(null);
   
   const handlePrint = useReactToPrint({
-    content: () => printBillRef.current,
+    content: () => receiptRef.current,
     onAfterPrint: () => {
       toast({
-        title: "Bill Printed Successfully",
-        description: "The bill has been sent to the printer.",
+        title: "Receipt printed successfully",
+        description: "A copy has been saved to your records.",
       });
-    },
+    }
   });
   
-  // Sample orders data
-  const orders: Order[] = [
-    {
-      id: "ord-001",
-      customer: "Arjun Kumar",
-      items: [
-        { name: "Masala Dosa", price: 120, quantity: 2 },
-        { name: "Filter Coffee", price: 40, quantity: 2 }
-      ],
-      total: 320,
-      status: "completed",
-      date: "2023-03-15",
-      time: "12:30 PM",
-      paymentMethod: "UPI",
-      orderNumber: "12345"
-    },
-    {
-      id: "ord-002",
-      customer: "Priya Singh",
-      items: [
-        { name: "Veg Biryani", price: 180, quantity: 1 },
-        { name: "Raita", price: 30, quantity: 1 },
-        { name: "Sweet Lassi", price: 60, quantity: 1 }
-      ],
-      total: 270,
-      status: "pending",
-      date: "2023-03-15",
-      time: "1:15 PM",
-      paymentMethod: "Cash",
-      orderNumber: "12346"
-    },
-    {
-      id: "ord-003",
-      customer: "Rahul Sharma",
-      items: [
-        { name: "Idli Plate", price: 80, quantity: 1 },
-        { name: "Vada", price: 40, quantity: 2 },
-        { name: "Sambar", price: 30, quantity: 1 }
-      ],
-      total: 190,
-      status: "cancelled",
-      date: "2023-03-14",
-      time: "7:45 PM",
-      paymentMethod: "Wallet",
-      orderNumber: "12347"
-    },
-    {
-      id: "ord-004",
-      customer: "Ananya Patel",
-      items: [
-        { name: "Poori Bhaji", price: 110, quantity: 1 },
-        { name: "Masala Chai", price: 30, quantity: 2 }
-      ],
-      total: 170,
-      status: "completed",
-      date: "2023-03-14",
-      time: "9:20 AM",
-      paymentMethod: "Card",
-      orderNumber: "12348"
-    },
-    {
-      id: "ord-005",
-      customer: "Vikram Reddy",
-      items: [
-        { name: "Chole Bhature", price: 150, quantity: 1 },
-        { name: "Sweet Lassi", price: 60, quantity: 1 }
-      ],
-      total: 210,
-      status: "completed",
-      date: "2023-03-13",
-      time: "2:10 PM",
-      paymentMethod: "UPI",
-      orderNumber: "12349"
+  const calculateTotal = () => {
+    return orderItems.reduce((total, item) => total + (item.price * item.quantity), 0);
+  };
+  
+  const addItemToOrder = () => {
+    if (!selectedItemId) return;
+    
+    const menuItem = menuItems.find(item => item.id === selectedItemId);
+    if (!menuItem) return;
+    
+    // Check if item already exists in order
+    const existingItem = orderItems.find(item => item.id === selectedItemId);
+    
+    if (existingItem) {
+      // Update quantity if already in order
+      updateItemQuantity({ id: existingItem.id, newQuantity: existingItem.quantity + 1 });
+    } else {
+      // Add new item
+      setOrderItems([...orderItems, {
+        id: menuItem.id,
+        name: menuItem.name,
+        price: menuItem.price,
+        quantity: 1
+      }]);
     }
-  ];
-
-  // Filter orders based on search query, status, and date
-  const filteredOrders = orders.filter(order => {
-    const matchesSearch = order.customer.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          order.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          order.orderNumber.includes(searchQuery);
     
-    const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
-    const matchesDate = !dateFilter || order.date === dateFilter;
+    setSelectedItemId('');
+  };
+  
+  const updateItemQuantity = ({ id, newQuantity }: { id: string, newQuantity: number }) => {
+    if (newQuantity <= 0) {
+      removeItemFromOrder(id);
+      return;
+    }
     
-    return matchesSearch && matchesStatus && matchesDate;
-  });
-
-  // Function to print a receipt for a specific order
-  const printReceipt = (order: Order) => {
-    setSelectedOrder(order);
-    setTimeout(() => {
+    setOrderItems(orderItems.map(item =>
+      item.id === id ? { ...item, quantity: newQuantity } : item
+    ));
+  };
+  
+  const removeItemFromOrder = (id: string) => {
+    setOrderItems(orderItems.filter(item => item.id !== id));
+  };
+  
+  const handleSubmitOrder = async () => {
+    if (!customerName || orderItems.length === 0) {
+      toast({
+        title: "Unable to create order",
+        description: "Please add customer details and at least one item",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    try {
+      // In a real app, this would save to a database
+      const orderData = {
+        order: {
+          customer_id: `cust-${Date.now()}`,
+          customer_name: customerName,
+          customer_email: customerEmail || 'guest@example.com',
+          total_amount: calculateTotal(),
+          status: 'completed',
+          payment_method: paymentMethod,
+          payment_status: 'paid',
+          special_instructions: specialInstructions
+        },
+        orderItems: orderItems.map(item => ({
+          ...item,
+          order_id: `order-${Date.now()}`
+        }))
+      };
+      
+      // In a production app, save order to database here
+      
+      toast({
+        title: "Order created successfully",
+        description: `Order #${Date.now()} has been completed`,
+      });
+      
+      // Print receipt
       handlePrint();
-    }, 100);
+      
+      // Reset form
+      setCustomerName('');
+      setCustomerEmail('');
+      setOrderItems([]);
+      setPaymentMethod('cash');
+      setSpecialInstructions('');
+    } catch (error) {
+      console.error('Error submitting order:', error);
+      toast({
+        title: "Error creating order",
+        description: "Please try again",
+        variant: "destructive",
+      });
+    }
   };
-
-  // Function to handle the creation of a new bill
-  const generateNewBill = () => {
-    const newOrderNumber = generateRandomOrderNumber();
-    toast({
-      title: "New Bill Generated",
-      description: `Bill #${newOrderNumber} has been created.`,
-    });
-    // In a real app, you would create a new order in the database
-  };
-
+  
   return (
     <div className="min-h-screen bg-gray-50">
       <NavBar />
       
-      <div className="py-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+      <div className="max-w-6xl mx-auto p-4 py-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
         >
-          <h1 className="text-3xl font-bold mb-6 text-navy-800">Billing System</h1>
+          <h1 className="text-3xl font-bold text-[#15187C] mb-6">Staff Billing</h1>
           
-          <Tabs defaultValue="billing">
-            <TabsList className="grid w-full grid-cols-2 mb-8">
-              <TabsTrigger value="billing">Billing</TabsTrigger>
-              <TabsTrigger value="transactions">Transaction History</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="billing">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                <Card className="md:col-span-2">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-lg">New Bill</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                      <div>
-                        <Label htmlFor="customer-name">Customer Name</Label>
-                        <Input 
-                          id="customer-name" 
-                          placeholder="Enter customer name"
-                          className="mt-1" 
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="contact">Contact Number</Label>
-                        <Input 
-                          id="contact" 
-                          placeholder="Enter contact number" 
-                          className="mt-1"
-                        />
-                      </div>
-                    </div>
-                    
-                    <div className="mb-6">
-                      <Label>Payment Method</Label>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-1">
-                        <Button 
-                          variant="outline" 
-                          className="flex items-center justify-center h-20 border-2 border-navy-200 hover:border-navy-500 hover:bg-navy-50"
-                        >
-                          <div className="text-center">
-                            <CreditCard className="h-6 w-6 mx-auto mb-1 text-navy-700" />
-                            <span className="text-sm">Card</span>
-                          </div>
-                        </Button>
-                        <Button 
-                          variant="outline" 
-                          className="flex items-center justify-center h-20 border-2 border-navy-200 hover:border-navy-500 hover:bg-navy-50"
-                        >
-                          <div className="text-center">
-                            <QrCode className="h-6 w-6 mx-auto mb-1 text-navy-700" />
-                            <span className="text-sm">UPI</span>
-                          </div>
-                        </Button>
-                        <Button 
-                          variant="outline" 
-                          className="flex items-center justify-center h-20 border-2 border-navy-200 hover:border-navy-500 hover:bg-navy-50"
-                        >
-                          <div className="text-center">
-                            <Receipt className="h-6 w-6 mx-auto mb-1 text-navy-700" />
-                            <span className="text-sm">Cash</span>
-                          </div>
-                        </Button>
-                        <Button 
-                          variant="outline" 
-                          className="flex items-center justify-center h-20 border-2 border-navy-200 hover:border-navy-500 hover:bg-navy-50"
-                        >
-                          <div className="text-center">
-                            <AlertCircle className="h-6 w-6 mx-auto mb-1 text-navy-700" />
-                            <span className="text-sm">Other</span>
-                          </div>
-                        </Button>
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-4 mb-6">
-                      <div className="flex justify-between items-center">
-                        <h3 className="font-medium">Items</h3>
-                        <Button variant="outline" size="sm">Add Item</Button>
-                      </div>
-                      
-                      <div className="bg-navy-50 rounded-md p-4">
-                        <p className="text-center text-gray-500">No items added yet</p>
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-2 mb-6">
-                      <div className="flex justify-between">
-                        <span className="font-medium">Subtotal</span>
-                        <span>₹0.00</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="font-medium">Tax (GST 5%)</span>
-                        <span>₹0.00</span>
-                      </div>
-                      <div className="flex justify-between text-lg font-semibold">
-                        <span>Total</span>
-                        <span>₹0.00</span>
-                      </div>
-                    </div>
-                    
-                    <div className="flex flex-col sm:flex-row gap-4">
-                      <Button 
-                        className="flex-1 bg-navy-700 hover:bg-navy-800"
-                        onClick={generateNewBill}
-                      >
-                        Generate Bill
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        className="flex-1 border-navy-500 text-navy-700 hover:bg-navy-50"
-                      >
-                        <Printer className="mr-2 h-4 w-4" />
-                        Print Receipt
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-                
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-lg">Recent Transactions</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {orders.slice(0, 3).map(order => (
-                      <div 
-                        key={order.id} 
-                        className="flex flex-col p-3 bg-white rounded-lg border border-gray-200 hover:border-navy-500 transition-colors"
-                      >
-                        <div className="flex justify-between items-start mb-2">
-                          <div>
-                            <p className="font-medium">{order.customer}</p>
-                            <p className="text-xs text-gray-500">Order #{order.orderNumber}</p>
-                          </div>
-                          <span className={`text-sm font-medium px-2 py-1 rounded-full ${
-                            order.status === 'completed' ? 'bg-green-100 text-green-800' :
-                            order.status === 'pending' ? 'bg-amber-100 text-amber-800' :
-                            'bg-red-100 text-red-800'
-                          }`}>
-                            {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
-                          </span>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm text-gray-600">{order.date}, {order.time}</span>
-                          <span className="font-semibold">₹{order.total}</span>
-                        </div>
-                      </div>
-                    ))}
-                    
-                    <Button 
-                      variant="outline" 
-                      className="w-full text-navy-700 hover:bg-navy-50"
-                    >
-                      View All Transactions
-                    </Button>
-                  </CardContent>
-                </Card>
-              </div>
-            </TabsContent>
-            
-            <TabsContent value="transactions">
-              <Card>
-                <CardHeader>
-                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                    <CardTitle>Transaction History</CardTitle>
-                    <div className="flex gap-2">
-                      <Button variant="outline" className="text-navy-700">
-                        <Download className="h-4 w-4 mr-2" />
-                        Export
-                      </Button>
-                    </div>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Customer Details */}
+            <Card className="lg:col-span-2">
+              <CardHeader>
+                <CardTitle>Customer Information</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="customer-name">Customer Name</Label>
+                    <Input 
+                      id="customer-name" 
+                      value={customerName}
+                      onChange={(e) => setCustomerName(e.target.value)}
+                      placeholder="Enter customer name"
+                    />
                   </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4">
-                    <div className="relative md:col-span-2">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                      <Input 
-                        placeholder="Search by customer, order ID or number" 
-                        className="pl-10"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)} 
-                      />
-                    </div>
-                    
-                    <div>
-                      <Select value={statusFilter} onValueChange={setStatusFilter}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Filter by status" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">All Status</SelectItem>
-                          <SelectItem value="completed">Completed</SelectItem>
-                          <SelectItem value="pending">Pending</SelectItem>
-                          <SelectItem value="cancelled">Cancelled</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    
-                    <div>
-                      <Input 
-                        type="date" 
-                        value={dateFilter}
-                        onChange={(e) => setDateFilter(e.target.value)}
-                      />
-                    </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="customer-email">Customer Email (Optional)</Label>
+                    <Input 
+                      id="customer-email" 
+                      value={customerEmail}
+                      onChange={(e) => setCustomerEmail(e.target.value)}
+                      placeholder="Enter customer email"
+                    />
                   </div>
-                </CardHeader>
+                </div>
                 
-                <CardContent>
-                  <div className="overflow-x-auto">
-                    <table className="w-full border-collapse">
-                      <thead>
-                        <tr className="border-b border-gray-200 bg-navy-50">
-                          <th className="text-left py-3 px-4 text-sm font-medium">Order #</th>
-                          <th className="text-left py-3 px-4 text-sm font-medium">Date & Time</th>
-                          <th className="text-left py-3 px-4 text-sm font-medium">Customer</th>
-                          <th className="text-left py-3 px-4 text-sm font-medium">Items</th>
-                          <th className="text-left py-3 px-4 text-sm font-medium">Amount</th>
-                          <th className="text-left py-3 px-4 text-sm font-medium">Status</th>
-                          <th className="text-left py-3 px-4 text-sm font-medium">Actions</th>
+                <div className="space-y-2">
+                  <Label htmlFor="payment-method">Payment Method</Label>
+                  <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select payment method" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="cash">Cash</SelectItem>
+                      <SelectItem value="card">Card</SelectItem>
+                      <SelectItem value="upi">UPI</SelectItem>
+                      <SelectItem value="wallet">Cafeteria Wallet</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="special-instructions">Special Instructions (Optional)</Label>
+                  <Input 
+                    id="special-instructions" 
+                    value={specialInstructions}
+                    onChange={(e) => setSpecialInstructions(e.target.value)}
+                    placeholder="Any special instructions"
+                  />
+                </div>
+              </CardContent>
+            </Card>
+            
+            {/* Order Summary */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Order Summary</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <p className="text-lg font-medium">Total Amount</p>
+                  <p className="text-3xl font-bold text-[#15187C]">₹{calculateTotal().toFixed(2)}</p>
+                </div>
+                
+                <div className="space-y-2">
+                  <p className="text-sm text-gray-600">Items: {orderItems.reduce((sum, item) => sum + item.quantity, 0)}</p>
+                  <p className="text-sm text-gray-600">Payment: {paymentMethod.charAt(0).toUpperCase() + paymentMethod.slice(1)}</p>
+                </div>
+                
+                <Button 
+                  className="w-full bg-[#15187C] hover:bg-[#0e105a]"
+                  onClick={handleSubmitOrder}
+                  disabled={orderItems.length === 0 || !customerName}
+                >
+                  <Check className="mr-2 h-4 w-4" />
+                  Complete Order
+                </Button>
+                
+                <Button 
+                  variant="outline" 
+                  className="w-full mt-2"
+                  onClick={handlePrint}
+                  disabled={orderItems.length === 0}
+                >
+                  <Printer className="mr-2 h-4 w-4" />
+                  Print Receipt
+                </Button>
+              </CardContent>
+            </Card>
+            
+            {/* Menu Items */}
+            <Card className="lg:col-span-2">
+              <CardHeader>
+                <CardTitle>Add Items</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex space-x-2">
+                  <div className="flex-1">
+                    <Select value={selectedItemId} onValueChange={setSelectedItemId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select menu item" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {menuItems.map(item => (
+                          <SelectItem key={item.id} value={item.id} disabled={!item.available}>
+                            {item.name} - ₹{item.price.toFixed(2)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <Button 
+                    onClick={addItemToOrder}
+                    disabled={!selectedItemId}
+                    className="bg-[#15187C] hover:bg-[#0e105a]"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Add
+                  </Button>
+                </div>
+                
+                {orderItems.length > 0 ? (
+                  <div className="border rounded-md overflow-hidden">
+                    <table className="w-full">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item</th>
+                          <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
+                          <th className="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Qty</th>
+                          <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
+                          <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                         </tr>
                       </thead>
-                      <tbody>
-                        {filteredOrders.map(order => (
-                          <tr key={order.id} className="border-b border-gray-200 hover:bg-navy-50">
-                            <td className="py-3 px-4 text-navy-700 font-medium">{order.orderNumber}</td>
-                            <td className="py-3 px-4 text-sm">{order.date}<br/>{order.time}</td>
-                            <td className="py-3 px-4">{order.customer}</td>
-                            <td className="py-3 px-4">
-                              <div className="flex flex-col">
-                                {order.items.map((item, idx) => (
-                                  <span key={idx} className="text-sm">
-                                    {item.quantity}x {item.name}
-                                  </span>
-                                ))}
+                      <tbody className="divide-y divide-gray-200">
+                        {orderItems.map(item => (
+                          <tr key={item.id}>
+                            <td className="px-4 py-3 text-sm text-gray-900">{item.name}</td>
+                            <td className="px-4 py-3 text-sm text-gray-900 text-right">₹{item.price.toFixed(2)}</td>
+                            <td className="px-4 py-3 text-sm text-gray-900">
+                              <div className="flex items-center justify-center space-x-2">
+                                <Button 
+                                  size="icon"
+                                  variant="outline"
+                                  className="h-6 w-6 rounded-full p-0"
+                                  onClick={() => updateItemQuantity({ id: item.id, newQuantity: item.quantity - 1 })}
+                                >
+                                  <Minus className="h-3 w-3" />
+                                </Button>
+                                <span className="w-8 text-center">{item.quantity}</span>
+                                <Button 
+                                  size="icon"
+                                  variant="outline"
+                                  className="h-6 w-6 rounded-full p-0"
+                                  onClick={() => updateItemQuantity({ id: item.id, newQuantity: item.quantity + 1 })}
+                                >
+                                  <Plus className="h-3 w-3" />
+                                </Button>
                               </div>
                             </td>
-                            <td className="py-3 px-4 font-medium">₹{order.total}</td>
-                            <td className="py-3 px-4">
-                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                order.status === 'completed' ? 'bg-green-100 text-green-800' :
-                                order.status === 'pending' ? 'bg-amber-100 text-amber-800' : 
-                                'bg-red-100 text-red-800'
-                              }`}>
-                                {order.status === 'completed' && <CheckCircle className="mr-1 h-3 w-3" />}
-                                {order.status === 'pending' && <Clock className="mr-1 h-3 w-3" />}
-                                {order.status === 'cancelled' && <AlertCircle className="mr-1 h-3 w-3" />}
-                                {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
-                              </span>
+                            <td className="px-4 py-3 text-sm text-gray-900 text-right font-medium">
+                              ₹{(item.price * item.quantity).toFixed(2)}
                             </td>
-                            <td className="py-3 px-4">
+                            <td className="px-4 py-3 text-sm text-gray-900 text-right">
                               <Button 
-                                variant="ghost" 
-                                size="sm"
-                                className="text-navy-700 hover:bg-navy-100"
-                                onClick={() => printReceipt(order)}
+                                size="icon"
+                                variant="ghost"
+                                className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-full"
+                                onClick={() => removeItemFromOrder(item.id)}
                               >
-                                <Printer className="h-4 w-4 mr-1" />
-                                Print
+                                <Trash2 className="h-4 w-4" />
                               </Button>
                             </td>
                           </tr>
                         ))}
-                        
-                        {filteredOrders.length === 0 && (
-                          <tr>
-                            <td colSpan={7} className="py-8 text-center text-gray-500">
-                              No transactions found matching your criteria
-                            </td>
-                          </tr>
-                        )}
                       </tbody>
                     </table>
                   </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
-          
-          {/* Hidden receipt for printing */}
-          <div className="hidden">
-            <div ref={printBillRef} className="p-6 max-w-sm mx-auto bg-white">
-              {selectedOrder && (
-                <div className="text-sm">
-                  <div className="text-center mb-4">
-                    <h2 className="text-lg font-bold">Smart Cafeteria</h2>
-                    <p>University of Technology Campus</p>
-                    <p>Tel: +91 1234567890</p>
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    No items added to this order yet
                   </div>
-                  
-                  <div className="border-t border-b border-gray-300 py-2 mb-4">
-                    <p><strong>Receipt #:</strong> {selectedOrder.orderNumber}</p>
-                    <p><strong>Date:</strong> {selectedOrder.date}</p>
-                    <p><strong>Time:</strong> {selectedOrder.time}</p>
-                    <p><strong>Customer:</strong> {selectedOrder.customer}</p>
-                    <p><strong>Payment Method:</strong> {selectedOrder.paymentMethod}</p>
-                  </div>
-                  
-                  <table className="w-full mb-4">
-                    <thead>
-                      <tr className="border-b border-gray-300">
-                        <th className="text-left">Item</th>
-                        <th className="text-right">Qty</th>
-                        <th className="text-right">Price</th>
-                        <th className="text-right">Total</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {selectedOrder.items.map((item, idx) => (
-                        <tr key={idx} className="border-b border-gray-200">
-                          <td className="py-1">{item.name}</td>
-                          <td className="py-1 text-right">{item.quantity}</td>
-                          <td className="py-1 text-right">₹{item.price}</td>
-                          <td className="py-1 text-right">₹{item.price * item.quantity}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                  
-                  <div className="mb-4">
-                    <div className="flex justify-between">
-                      <span>Subtotal:</span>
-                      <span>₹{selectedOrder.total - Math.round(selectedOrder.total * 0.05)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Tax (5%):</span>
-                      <span>₹{Math.round(selectedOrder.total * 0.05)}</span>
-                    </div>
-                    <div className="flex justify-between font-bold border-t border-gray-300 pt-1 mt-1">
-                      <span>Total:</span>
-                      <span>₹{selectedOrder.total}</span>
-                    </div>
-                  </div>
-                  
-                  <div className="text-center mt-6">
-                    <p>Thank you for your order!</p>
-                    <p>Visit us again soon</p>
-                  </div>
-                  
-                  <div className="text-center mt-4 text-xs text-gray-500">
-                    <p>This is a computer-generated receipt.</p>
-                    <p>No signature required.</p>
-                  </div>
-                </div>
-              )}
-            </div>
+                )}
+              </CardContent>
+            </Card>
           </div>
         </motion.div>
       </div>
+      
+      {/* Hidden receipt for printing */}
+      <Receipt 
+        ref={receiptRef} 
+        orderData={orderItems} 
+        customerName={customerName} 
+        totalAmount={calculateTotal()} 
+        paymentMethod={paymentMethod} 
+      />
     </div>
   );
 };
