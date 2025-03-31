@@ -58,19 +58,19 @@ export const MovableChat: React.FC = () => {
         {isOpen ? (
           <div className="relative">
             <Button
-              className="absolute -right-2 -top-2 z-50 h-7 w-7 rounded-full bg-navy-900 hover:bg-navy-800 p-0 text-white"
+              className="absolute -right-2 -top-2 z-50 h-7 w-7 rounded-full bg-[#121b3b] hover:bg-[#1e2e64] p-0 text-white"
               onClick={() => setIsOpen(false)}
             >
               ✕
             </Button>
-            <div className="w-80 sm:w-96 h-[500px] bg-white rounded-lg shadow-xl overflow-hidden border border-navy-200">
+            <div className="w-80 sm:w-96 h-[500px] bg-[#1a1f33] rounded-lg shadow-xl overflow-hidden border border-[#384374]">
               <ChatBot onClose={() => setIsOpen(false)} />
             </div>
           </div>
         ) : (
           <motion.button
             id="chat-button"
-            className="w-14 h-14 rounded-full bg-navy-700 hover:bg-navy-800 shadow-lg border-2 border-white flex items-center justify-center text-white"
+            className="w-14 h-14 rounded-full bg-[#212a4e] hover:bg-[#1e2e64] shadow-lg border-2 border-[#384374] flex items-center justify-center text-white"
             onClick={() => !isDragging && setIsOpen(true)}
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}

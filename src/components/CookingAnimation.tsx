@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 
 interface CookingAnimationProps {
   className?: string;
-  type: 'dosa' | 'idli' | 'biryani' | 'poori';
+  type: 'dosa' | 'idli' | 'biryani' | 'poori' | 'friedrice';
 }
 
 export const CookingAnimation: React.FC<CookingAnimationProps> = ({ className, type }) => {
@@ -64,7 +64,7 @@ export const CookingAnimation: React.FC<CookingAnimationProps> = ({ className, t
         {/* Steam */}
         {renderSteam()}
       </div>
-      <p className="text-center font-medium mt-4 text-navy-700">Making Crispy Dosa</p>
+      <p className="text-center font-medium mt-4 text-white">Making Crispy Dosa</p>
     </div>
   );
   
@@ -104,7 +104,7 @@ export const CookingAnimation: React.FC<CookingAnimationProps> = ({ className, t
         {renderSteam()}
         {renderSteam()}
       </div>
-      <p className="text-center font-medium mt-4 text-navy-700">Steaming Soft Idlis</p>
+      <p className="text-center font-medium mt-4 text-white">Steaming Soft Idlis</p>
     </div>
   );
   
@@ -140,7 +140,7 @@ export const CookingAnimation: React.FC<CookingAnimationProps> = ({ className, t
         {renderSteam()}
         {renderSteam()}
       </div>
-      <p className="text-center font-medium mt-4 text-navy-700">Preparing Flavorful Biryani</p>
+      <p className="text-center font-medium mt-4 text-white">Preparing Flavorful Biryani</p>
     </div>
   );
   
@@ -201,7 +201,64 @@ export const CookingAnimation: React.FC<CookingAnimationProps> = ({ className, t
           transition={{ duration: 3, repeat: Infinity }}
         />
       </div>
-      <p className="text-center font-medium mt-4 text-navy-700">Frying Puffy Pooris</p>
+      <p className="text-center font-medium mt-4 text-white">Frying Puffy Pooris</p>
+    </div>
+  );
+  
+  const renderFriedRice = () => (
+    <div className={`relative ${className}`}>
+      <div className="relative w-60 h-40 mx-auto">
+        {/* Wok */}
+        <motion.div 
+          className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-44 h-20 bg-gray-600 rounded-full overflow-hidden"
+          animate={{ rotate: [-2, 2, -2] }}
+          transition={{ duration: 2.5, repeat: Infinity }}
+        >
+          {/* Rice */}
+          <div className="absolute inset-2 bottom-0 bg-amber-100 rounded-full" />
+        </motion.div>
+        
+        {/* Vegetables */}
+        {Array.from({ length: 10 }).map((_, i) => (
+          <motion.div
+            key={i}
+            className={`absolute w-2 h-2 rounded-full`}
+            style={{ 
+              backgroundColor: ['#FF6B6B', '#4CAF50', '#FFA500', '#FF5722'][i % 4],
+              left: `${20 + (i * 6)}%`,
+              bottom: `${10 + Math.random() * 6}px`
+            }}
+            animate={{
+              y: [-2, 2, -2],
+              x: [1, -1, 1],
+              rotate: [0, 180, 360]
+            }}
+            transition={{
+              duration: 1.5 + Math.random(),
+              repeat: Infinity,
+              repeatType: "loop",
+              delay: i * 0.1
+            }}
+          />
+        ))}
+        
+        {/* Spatula */}
+        <motion.div 
+          className="absolute left-1/3 top-2 w-4 h-20 bg-amber-800"
+          style={{ transformOrigin: "bottom center" }}
+          animate={{ 
+            rotate: [-20, 5, 20, 5, -20],
+            y: [0, -2, 0, -2, 0]
+          }}
+          transition={{ duration: 3, repeat: Infinity }}
+        >
+          <div className="w-10 h-4 bg-amber-800 absolute -left-3 top-0 rounded-sm" />
+        </motion.div>
+        
+        {/* Steam */}
+        {renderSteam()}
+      </div>
+      <p className="text-center font-medium mt-4 text-white">Stir-Frying Delicious Fried Rice</p>
     </div>
   );
   
@@ -215,6 +272,8 @@ export const CookingAnimation: React.FC<CookingAnimationProps> = ({ className, t
         return renderBiryani();
       case 'poori':
         return renderPoori();
+      case 'friedrice':
+        return renderFriedRice();
       default:
         return renderDosa();
     }

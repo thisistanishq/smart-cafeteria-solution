@@ -8,6 +8,7 @@ import { AppProvider } from "@/context/AppContext";
 import { AnimatePresence } from "framer-motion";
 import { MovableChat } from "@/components/MovableChat";
 import { RoleBasedRoute } from "@/components/RoleBasedRoute";
+import "./App.css";
 
 // Pages
 import HomePage from "./pages/HomePage";
@@ -39,8 +40,25 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <AppProvider>
       <TooltipProvider>
-        <Toaster />
-        <Sonner />
+        <Toaster 
+          toastOptions={{
+            style: {
+              background: '#192244',
+              color: '#e6eaf4',
+              border: '1px solid #384374',
+            },
+          }}
+        />
+        <Sonner 
+          theme="dark"
+          toastOptions={{
+            style: {
+              background: '#192244',
+              color: '#e6eaf4',
+              border: '1px solid #384374',
+            },
+          }}
+        />
         <BrowserRouter>
           <AnimatePresence mode="wait">
             <Routes>

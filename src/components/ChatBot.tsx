@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { MessageCircle, X, Send, Zap, Bot, ShoppingCart } from 'lucide-react';
+import { MessageCircle, X, Send, Zap, Bot, ShoppingCart, Wallet } from 'lucide-react';
 import { aiService } from '@/services/supabase';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useApp } from '@/context/AppContext';
@@ -32,7 +32,7 @@ export const ChatBot: React.FC<ChatBotProps> = ({ onClose }) => {
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const { menuItems, addToCart } = useApp();
+  const { menuItems, addToCart, user } = useApp();
   const navigate = useNavigate();
   
   const scrollToBottom = () => {
@@ -80,6 +80,11 @@ export const ChatBot: React.FC<ChatBotProps> = ({ onClose }) => {
       return { action: 'recommend', success: true };
     }
     
+    // Handle wallet inquiry
+    if (lowerMsg.includes('wallet') || lowerMsg.includes('balance')) {
+      return { action: 'wallet', success: true };
+    }
+    
     // No specific intent found
     return { action: 'none', success: false };
   };
@@ -121,6 +126,14 @@ export const ChatBot: React.FC<ChatBotProps> = ({ onClose }) => {
       return `Based on customer favorites, I'd recommend: ${topRated.map(item => item.name).join(', ')}. Would you like to know more about any of these dishes?`;
     }
     
+    if (intent.action === 'wallet') {
+      if (user && user.walletBalance !== undefined) {
+        return `Your current wallet balance is ₹${user.walletBalance}. You can add more funds in the Wallet section.`;
+      } else {
+        return "You can check your wallet balance in the Wallet section. Would you like me to take you there?";
+      }
+    }
+    
     // General responses for menu, hours, etc.
     if (userMessage.toLowerCase().includes('menu')) {
       return "Our menu features a variety of delicious South Indian options! We have dosas, idlis, vadas, biryani, and more. You can check the full menu in the Menu section. Would you like me to recommend something?";
@@ -157,6 +170,7 @@ export const ChatBot: React.FC<ChatBotProps> = ({ onClose }) => {
     
     // If ordering intent was successful, navigate to cart after delay
     const shouldNavigateToCart = intent.action === 'order' && intent.success;
+    const shouldNavigateToWallet = intent.action === 'wallet' && !user?.walletBalance;
     
     try {
       // Generate response based on intent
@@ -178,6 +192,14 @@ export const ChatBot: React.FC<ChatBotProps> = ({ onClose }) => {
         if (shouldNavigateToCart) {
           setTimeout(() => {
             navigate('/cart');
+            if (onClose) onClose();
+          }, 1500);
+        }
+        
+        // If we detected a wallet intent and user needs to see wallet, navigate after delay
+        if (shouldNavigateToWallet) {
+          setTimeout(() => {
+            navigate('/wallet');
             if (onClose) onClose();
           }, 1500);
         }
@@ -234,7 +256,7 @@ export const ChatBot: React.FC<ChatBotProps> = ({ onClose }) => {
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="bg-navy-800 text-white p-3 flex justify-between items-center">
+      <div className="bg-[#192244] text-white p-3 flex justify-between items-center">
         <div className="flex items-center space-x-2">
           <motion.div
             animate={{ 
@@ -251,20 +273,30 @@ export const ChatBot: React.FC<ChatBotProps> = ({ onClose }) => {
           </motion.div>
           <h3 className="font-semibold">Smart Cafeteria Assistant</h3>
         </div>
-        {onClose && (
+        <div className="flex space-x-2">
           <Button 
             variant="ghost" 
             size="icon" 
-            onClick={onClose}
-            className="text-white hover:bg-navy-700 rounded-full h-8 w-8 p-0"
+            onClick={() => navigate('/wallet')}
+            className="text-white hover:bg-[#2d375f] rounded-full h-8 w-8 p-0"
           >
-            <X className="h-4 w-4" />
+            <Wallet className="h-4 w-4" />
           </Button>
-        )}
+          {onClose && (
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={onClose}
+              className="text-white hover:bg-[#2d375f] rounded-full h-8 w-8 p-0"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
       </div>
       
       {/* Messages container */}
-      <div className="flex-1 p-3 overflow-y-auto bg-gray-50">
+      <div className="flex-1 p-3 overflow-y-auto bg-[#131b38]">
         <motion.div 
           className="space-y-3"
           variants={staggerContainerVariants}
@@ -279,8 +311,8 @@ export const ChatBot: React.FC<ChatBotProps> = ({ onClose }) => {
             >
               <div className={`max-w-[80%] rounded-lg p-3 ${
                 msg.role === 'user' 
-                  ? 'bg-navy-700 text-white'
-                  : 'bg-white border border-gray-200'
+                  ? 'bg-[#2d375f] text-white'
+                  : 'bg-[#192244] border border-[#384374] text-gray-100'
               }`}>
                 <p className="text-sm">{msg.content}</p>
                 <p className="text-xs mt-1 opacity-70">
@@ -295,11 +327,11 @@ export const ChatBot: React.FC<ChatBotProps> = ({ onClose }) => {
               className="flex justify-start"
               variants={bubbleVariants}
             >
-              <div className="max-w-[80%] rounded-lg p-3 bg-white border border-gray-200">
+              <div className="max-w-[80%] rounded-lg p-3 bg-[#192244] border border-[#384374]">
                 <div className="flex space-x-2 items-center">
-                  <div className="w-2 h-2 rounded-full bg-navy-700 animate-bounce" style={{ animationDelay: '0s' }}></div>
-                  <div className="w-2 h-2 rounded-full bg-navy-700 animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                  <div className="w-2 h-2 rounded-full bg-navy-700 animate-bounce" style={{ animationDelay: '0.4s' }}></div>
+                  <div className="w-2 h-2 rounded-full bg-white animate-bounce" style={{ animationDelay: '0s' }}></div>
+                  <div className="w-2 h-2 rounded-full bg-white animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                  <div className="w-2 h-2 rounded-full bg-white animate-bounce" style={{ animationDelay: '0.4s' }}></div>
                 </div>
               </div>
             </motion.div>
@@ -310,12 +342,12 @@ export const ChatBot: React.FC<ChatBotProps> = ({ onClose }) => {
       </div>
       
       {/* Input area */}
-      <div className="border-t border-gray-200 p-3 bg-white">
+      <div className="border-t border-[#384374] p-3 bg-[#192244]">
         <div className="flex items-center space-x-2">
           <Textarea
             ref={textareaRef}
             placeholder="Type your message..."
-            className="flex-1 min-h-[40px] resize-none focus:border-navy-700 focus:ring-navy-700"
+            className="flex-1 min-h-[40px] resize-none bg-[#131b38] border-[#384374] text-white focus:border-[#4a5680] focus-visible:ring-[#4a5680]"
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             onKeyDown={(e) => {
@@ -330,7 +362,7 @@ export const ChatBot: React.FC<ChatBotProps> = ({ onClose }) => {
             whileTap={{ scale: 0.9 }}
           >
             <Button 
-              className="h-10 w-10 p-0 rounded-full bg-navy-700 hover:bg-navy-800 shadow transition-all duration-200"
+              className="h-10 w-10 p-0 rounded-full bg-[#2d375f] hover:bg-[#394470] shadow transition-all duration-200"
               onClick={handleSendMessage}
               disabled={isLoading || !message.trim()}
             >

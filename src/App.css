@@ -1,42 +1,215 @@
+
+/* Base styles */
 #root {
-  max-width: 1280px;
+  width: 100%;
   margin: 0 auto;
-  padding: 2rem;
   text-align: center;
 }
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
+body {
+  background-color: #0c1329;
+  color: #e6eaf4;
 }
 
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
+/* Animation keyframes */
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+@keyframes rotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* Dark theme gradients */
+.dark-gradient-1 {
+  background: linear-gradient(135deg, #131b38 0%, #192244 100%);
+}
+
+.dark-gradient-2 {
+  background: linear-gradient(135deg, #121b3b 0%, #1e2e64 100%);
+}
+
+.glass-effect {
+  background: rgba(25, 34, 68, 0.6);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(56, 67, 116, 0.3);
+}
+
+/* Custom animations */
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.animate-pulse-slow {
+  animation: pulse 3s ease-in-out infinite;
+}
+
+.animate-rotate {
+  animation: rotate 20s linear infinite;
+}
+
+.animate-shimmer {
+  background: linear-gradient(90deg, #192244 0%, #212a4e 50%, #192244 100%);
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite;
+}
+
+/* Hover transitions */
+.hover-scale {
+  transition: transform 0.2s ease-out;
+}
+
+.hover-scale:hover {
+  transform: scale(1.05);
+}
+
+.hover-glow {
+  transition: box-shadow 0.3s ease-out;
+}
+
+.hover-glow:hover {
+  box-shadow: 0 0 12px rgba(56, 67, 116, 0.8);
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #131b38;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #384374;
+  border-radius: 8px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #4a5680;
+}
+
+/* Text effects */
+.text-gradient {
+  background: linear-gradient(90deg, #ccd5e9 0%, #e6eaf4 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Card styles */
+.dark-card {
+  background-color: #192244;
+  border: 1px solid #384374;
+  border-radius: 0.5rem;
+  color: #e6eaf4;
+  overflow: hidden;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.dark-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+}
+
+/* Button styles */
+.blue-button {
+  background-color: #212a4e;
+  color: #e6eaf4;
+  border: none;
+  border-radius: 0.5rem;
+  padding: 0.5rem 1rem;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.blue-button:hover {
+  background-color: #1e2e64;
+}
+
+/* Form styles */
+.dark-input {
+  background-color: #131b38;
+  border: 1px solid #384374;
+  color: #e6eaf4;
+  border-radius: 0.375rem;
+  padding: 0.5rem 0.75rem;
+}
+
+.dark-input:focus {
+  border-color: #4a5680;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(74, 86, 128, 0.4);
+}
+
+/* Food animations */
+.pan {
+  position: relative;
+  width: 8rem;
+  height: 3rem;
+  background-color: #4a4a4a;
+  border-radius: 9999px;
+  margin: 0 auto;
+  overflow: hidden;
+  transform-origin: center bottom;
+  animation: cook 3s ease-in-out infinite;
+}
+
+.pan-handle {
+  position: absolute;
+  width: 2.5rem;
+  height: 1rem;
+  background-color: #333;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  border-top-right-radius: 9999px;
+  border-bottom-right-radius: 9999px;
+}
+
+.food {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 6rem;
+  height: 1.5rem;
+  background-color: #f3d89e;
+  border-radius: 9999px;
+}
+
+@keyframes cook {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(5deg); }
+  75% { transform: rotate(-5deg); }
+}
+
+/* Mobile specific styles */
+@media (max-width: 640px) {
+  .mobile-card {
+    padding: 1rem;
+    margin-bottom: 1rem;
   }
-  to {
-    transform: rotate(360deg);
+  
+  .mobile-text {
+    font-size: 0.875rem;
   }
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
+  
+  .mobile-heading {
+    font-size: 1.25rem;
+    font-weight: 600;
   }
-}
-
-.card {
-  padding: 2em;
-}
-
-.read-the-docs {
-  color: #888;
 }
