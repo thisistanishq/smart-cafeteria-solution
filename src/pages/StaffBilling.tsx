@@ -44,30 +44,14 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { Order, CartItem } from '@/types';
+import { useToast } from '@/hooks/use-toast';
 
-interface OrderWithItems {
-  id: string;
-  customer_name: string;
-  customer_email: string;
-  total_amount: number;
-  status: string;
-  payment_status: string;
-  payment_method: string;
-  created_at: string;
-  completed_at: string | null;
-  razorpay_payment_id: string | null;
-  items: Array<{
-    id: string;
-    name: string;
-    quantity: number;
-    price: number;
-    total: number;
-  }>;
-}
+interface OrderWithItems extends Order {}
 
 const BillTemplate = React.forwardRef<HTMLDivElement, { order: OrderWithItems }>((props, ref) => {
   const { order } = props;
-  const orderDate = new Date(order.created_at);
+  const orderDate = new Date(order.createdAt);
   const orderNumber = `#${order.id.substring(0, 8)}`;
   
   return (
@@ -93,7 +77,7 @@ const BillTemplate = React.forwardRef<HTMLDivElement, { order: OrderWithItems }>
         </div>
         <div className="flex justify-between">
           <span className="font-semibold">Customer:</span>
-          <span>{order.customer_name}</span>
+          <span>{order.customerName}</span>
         </div>
       </div>
       
@@ -107,8 +91,8 @@ const BillTemplate = React.forwardRef<HTMLDivElement, { order: OrderWithItems }>
           </tr>
         </thead>
         <tbody>
-          {order.items.map((item) => (
-            <tr key={item.id} className="border-b border-gray-200">
+          {order.items.map((item, index) => (
+            <tr key={index} className="border-b border-gray-200">
               <td className="py-2">{item.name}</td>
               <td className="text-center py-2">{item.quantity}</td>
               <td className="text-right py-2">₹{item.price.toFixed(2)}</td>
@@ -121,31 +105,31 @@ const BillTemplate = React.forwardRef<HTMLDivElement, { order: OrderWithItems }>
       <div className="mb-6">
         <div className="flex justify-between mb-2">
           <span className="font-semibold">Subtotal:</span>
-          <span>₹{order.total_amount.toFixed(2)}</span>
+          <span>₹{order.totalAmount.toFixed(2)}</span>
         </div>
         <div className="flex justify-between mb-2">
           <span className="font-semibold">Tax (Included):</span>
-          <span>₹{(order.total_amount * 0.05).toFixed(2)}</span>
+          <span>₹{(order.totalAmount * 0.05).toFixed(2)}</span>
         </div>
         <div className="flex justify-between border-t border-gray-300 pt-2 font-bold">
           <span>Grand Total:</span>
-          <span>₹{order.total_amount.toFixed(2)}</span>
+          <span>₹{order.totalAmount.toFixed(2)}</span>
         </div>
       </div>
       
       <div className="mb-6">
         <div className="flex justify-between mb-2">
           <span className="font-semibold">Payment Method:</span>
-          <span>{order.payment_method}</span>
+          <span>{order.paymentMethod}</span>
         </div>
         <div className="flex justify-between mb-2">
           <span className="font-semibold">Payment Status:</span>
-          <span>{order.payment_status}</span>
+          <span>{order.paymentStatus}</span>
         </div>
-        {order.razorpay_payment_id && (
+        {order.razorpayPaymentId && (
           <div className="flex justify-between">
             <span className="font-semibold">Transaction ID:</span>
-            <span className="text-sm">{order.razorpay_payment_id}</span>
+            <span className="text-sm">{order.razorpayPaymentId}</span>
           </div>
         )}
       </div>
@@ -160,8 +144,8 @@ const BillTemplate = React.forwardRef<HTMLDivElement, { order: OrderWithItems }>
 });
 
 const StaffBilling = () => {
-  const { isLoading } = useApp();
-  const [orders, setOrders] = useState<OrderWithItems[]>([]);
+  const { toast } = useToast();
+  const { isLoading, orders, user, isAuthenticated } = useApp();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [selectedOrder, setSelectedOrder] = useState<OrderWithItems | null>(null);
@@ -181,75 +165,49 @@ const StaffBilling = () => {
         setTimeout(resolve, 200);
       });
     },
-    onAfterPrint: () => setIsPrinting(false),
+    onAfterPrint: () => {
+      setIsPrinting(false);
+      toast({
+        title: "Bill printed successfully",
+        description: `Order #${selectedOrder?.id.substring(0, 8)} bill has been sent to printer`,
+      });
+    },
   });
   
-  // Mock data for demonstration
+  // Check if user is cafeteria staff
   useEffect(() => {
-    // In a real app, this would fetch from an API
-    const mockOrders: OrderWithItems[] = Array.from({ length: 10 }, (_, i) => {
-      const id = `${Math.random().toString(36).substring(2, 10)}`;
-      const date = new Date();
-      date.setHours(date.getHours() - i);
-      
-      const items = Array.from({ length: Math.floor(Math.random() * 3) + 1 }, (_, j) => {
-        const itemNames = ['Masala Dosa', 'Idli Sambar', 'Veg Biryani', 'Butter Naan', 'Paneer Curry'];
-        const name = itemNames[Math.floor(Math.random() * itemNames.length)];
-        const price = Math.floor(Math.random() * 150) + 50;
-        const quantity = Math.floor(Math.random() * 2) + 1;
-        
-        return {
-          id: `item-${Math.random().toString(36).substring(2, 10)}`,
-          name,
-          quantity,
-          price,
-          total: price * quantity
-        };
+    if (!isLoading && (!isAuthenticated || user?.role !== 'cafeteria_staff')) {
+      window.location.href = '/login';
+    }
+  }, [isLoading, isAuthenticated, user]);
+  
+  // Calculate summary stats
+  useEffect(() => {
+    if (orders.length > 0) {
+      const todaysOrders = orders.filter(order => {
+        const orderDate = new Date(order.createdAt).toISOString().split('T')[0];
+        return orderDate === selectedDate;
       });
       
-      const totalAmount = items.reduce((sum, item) => sum + item.total, 0);
-      const statuses = ['pending', 'completed', 'cancelled'];
-      const status = statuses[Math.floor(Math.random() * statuses.length)];
-      const paymentStatuses = ['paid', 'pending', 'failed'];
-      const paymentStatus = paymentStatuses[Math.floor(Math.random() * paymentStatuses.length)];
-      const paymentMethods = ['wallet', 'card', 'upi'];
-      const paymentMethod = paymentMethods[Math.floor(Math.random() * paymentMethods.length)];
+      const totalRev = todaysOrders.reduce((sum, order) => {
+        return order.paymentStatus === 'paid' || order.paymentStatus === 'completed' 
+          ? sum + order.totalAmount : sum;
+      }, 0);
       
-      return {
-        id,
-        customer_name: `Customer ${i + 1}`,
-        customer_email: `customer${i + 1}@example.com`,
-        total_amount: totalAmount,
-        status,
-        payment_status: paymentStatus,
-        payment_method: paymentMethod,
-        created_at: date.toISOString(),
-        completed_at: status === 'completed' ? new Date(date.getTime() + 1000 * 60 * 15).toISOString() : null,
-        razorpay_payment_id: Math.random() > 0.5 ? `pay_${Math.random().toString(36).substring(2, 10)}` : null,
-        items
-      };
-    });
-    
-    setOrders(mockOrders);
-    
-    // Calculate summary stats
-    const totalRev = mockOrders.reduce((sum, order) => {
-      return order.payment_status === 'paid' ? sum + order.total_amount : sum;
-    }, 0);
-    
-    setTotalRevenue(totalRev);
-    setTotalOrders(mockOrders.length);
-  }, []);
+      setTotalRevenue(totalRev);
+      setTotalOrders(todaysOrders.length);
+    }
+  }, [orders, selectedDate]);
   
   const filteredOrders = orders.filter(order => {
-    const matchesSearch = order.customer_name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    const matchesSearch = order.customerName.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           order.id.includes(searchTerm);
     
     const matchesStatus = filterStatus === 'all' || order.status === filterStatus;
-    const matchesPayment = filterPayment === 'all' || order.payment_status === filterPayment;
+    const matchesPayment = filterPayment === 'all' || order.paymentStatus === filterPayment;
     
     // Filter by selected date
-    const orderDate = new Date(order.created_at).toISOString().split('T')[0];
+    const orderDate = new Date(order.createdAt).toISOString().split('T')[0];
     const matchesDate = orderDate === selectedDate;
     
     return matchesSearch && matchesStatus && matchesPayment && matchesDate;
@@ -259,6 +217,8 @@ const StaffBilling = () => {
     switch (status) {
       case 'completed':
         return 'bg-green-500';
+      case 'preparing':
+      case 'confirmed':
       case 'pending':
         return 'bg-yellow-500';
       case 'cancelled':
@@ -271,6 +231,7 @@ const StaffBilling = () => {
   const paymentStatusColor = (status: string) => {
     switch (status) {
       case 'paid':
+      case 'completed':
         return 'bg-green-500';
       case 'pending':
         return 'bg-yellow-500';
@@ -281,9 +242,67 @@ const StaffBilling = () => {
     }
   };
   
-  if (isLoading) {
+  if (isLoading || !isAuthenticated || user?.role !== 'cafeteria_staff') {
     return <Loader text="Loading billing information..." />;
   }
+  
+  const handleDownloadBill = () => {
+    if (!selectedOrder) return;
+    
+    // Create bill content
+    const orderDate = new Date(selectedOrder.createdAt);
+    const orderNumber = `#${selectedOrder.id.substring(0, 8)}`;
+    
+    let billContent = `
+      Smart Cafeteria
+      123 Campus Drive, Education City
+      Tel: (123) 456-7890
+      
+      Order Number: ${orderNumber}
+      Date: ${orderDate.toLocaleDateString()}
+      Time: ${orderDate.toLocaleTimeString()}
+      Customer: ${selectedOrder.customerName}
+      
+      ---------------------------------
+      Item                Qty    Price    Total
+      ---------------------------------
+    `;
+    
+    selectedOrder.items.forEach(item => {
+      billContent += `\n${item.name.padEnd(20)}${item.quantity.toString().padEnd(8)}₹${item.price.toFixed(2).padEnd(8)}₹${item.total.toFixed(2)}`;
+    });
+    
+    billContent += `
+      ---------------------------------
+      Subtotal: ₹${selectedOrder.totalAmount.toFixed(2)}
+      Tax (5%): ₹${(selectedOrder.totalAmount * 0.05).toFixed(2)}
+      Grand Total: ₹${selectedOrder.totalAmount.toFixed(2)}
+      
+      Payment Method: ${selectedOrder.paymentMethod}
+      Payment Status: ${selectedOrder.paymentStatus}
+      ${selectedOrder.razorpayPaymentId ? `Transaction ID: ${selectedOrder.razorpayPaymentId}` : ''}
+      
+      Thank you for your order!
+      Visit us again soon.
+      --- Smart Cafeteria ---
+    `;
+    
+    // Create a blob and download
+    const blob = new Blob([billContent], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `order-${orderNumber}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    toast({
+      title: "Bill downloaded",
+      description: `Order ${orderNumber} bill has been downloaded`,
+    });
+  };
   
   return (
     <div className="min-h-screen flex flex-col bg-[#0c1329]">
@@ -296,8 +315,8 @@ const StaffBilling = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
           >
-            <h1 className="text-3xl font-bold mb-2 text-white">Billing Management</h1>
-            <p className="text-gray-400 mb-8">View, filter, and print customer bills</p>
+            <h1 className="text-3xl font-bold mb-2 text-white">Billing System</h1>
+            <p className="text-gray-400 mb-8">View, print, and manage customer bills</p>
           </motion.div>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -339,7 +358,7 @@ const StaffBilling = () => {
                     {orders.filter(o => o.status === 'completed').length}
                   </h3>
                   <p className="text-sm text-gray-400">
-                    {Math.round((orders.filter(o => o.status === 'completed').length / totalOrders) * 100)}% completion rate
+                    {Math.round((orders.filter(o => o.status === 'completed').length / (orders.length || 1)) * 100)}% completion rate
                   </p>
                 </CardContent>
               </Card>
@@ -359,10 +378,10 @@ const StaffBilling = () => {
                 </CardHeader>
                 <CardContent>
                   <h3 className="text-3xl font-bold">
-                    {orders.filter(o => o.payment_status === 'failed').length}
+                    {orders.filter(o => o.paymentStatus === 'failed').length}
                   </h3>
                   <p className="text-sm text-gray-400">
-                    {Math.round((orders.filter(o => o.payment_status === 'failed').length / totalOrders) * 100)}% failure rate
+                    {Math.round((orders.filter(o => o.paymentStatus === 'failed').length / (orders.length || 1)) * 100)}% failure rate
                   </p>
                 </CardContent>
               </Card>
@@ -428,6 +447,12 @@ const StaffBilling = () => {
                               <DropdownMenuItem onClick={() => setFilterStatus('pending')}>
                                 Pending
                               </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => setFilterStatus('confirmed')}>
+                                Confirmed
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => setFilterStatus('preparing')}>
+                                Preparing
+                              </DropdownMenuItem>
                               <DropdownMenuItem onClick={() => setFilterStatus('completed')}>
                                 Completed
                               </DropdownMenuItem>
@@ -490,27 +515,27 @@ const StaffBilling = () => {
                                   <TableCell className="font-medium">
                                     #{order.id.substring(0, 8)}
                                   </TableCell>
-                                  <TableCell>{order.customer_name}</TableCell>
+                                  <TableCell>{order.customerName}</TableCell>
                                   <TableCell className="whitespace-nowrap">
                                     <div className="flex items-center space-x-1">
                                       <Clock className="h-3 w-3 text-gray-400" />
                                       <span>
-                                        {new Date(order.created_at).toLocaleTimeString([], { 
+                                        {new Date(order.createdAt).toLocaleTimeString([], { 
                                           hour: '2-digit', 
                                           minute: '2-digit'
                                         })}
                                       </span>
                                     </div>
                                   </TableCell>
-                                  <TableCell>₹{order.total_amount.toFixed(2)}</TableCell>
+                                  <TableCell>₹{order.totalAmount.toFixed(2)}</TableCell>
                                   <TableCell>
                                     <Badge variant="outline" className={`${statusColor(order.status)} text-white border-0`}>
                                       {order.status}
                                     </Badge>
                                   </TableCell>
                                   <TableCell>
-                                    <Badge variant="outline" className={`${paymentStatusColor(order.payment_status)} text-white border-0`}>
-                                      {order.payment_status}
+                                    <Badge variant="outline" className={`${paymentStatusColor(order.paymentStatus)} text-white border-0`}>
+                                      {order.paymentStatus}
                                     </Badge>
                                   </TableCell>
                                   <TableCell className="text-right">
@@ -565,24 +590,24 @@ const StaffBilling = () => {
                           </TableHeader>
                           <TableBody>
                             {filteredOrders
-                              .filter(o => o.razorpay_payment_id)
+                              .filter(o => o.razorpayPaymentId)
                               .map((order) => (
                                 <TableRow key={order.id} className="hover:bg-[#212a4e] border-[#384374]">
                                   <TableCell className="font-medium">
-                                    {order.razorpay_payment_id?.substring(0, 12)}...
+                                    {order.razorpayPaymentId?.substring(0, 12)}...
                                   </TableCell>
-                                  <TableCell>{order.payment_method}</TableCell>
-                                  <TableCell>₹{order.total_amount.toFixed(2)}</TableCell>
+                                  <TableCell>{order.paymentMethod}</TableCell>
+                                  <TableCell>₹{order.totalAmount.toFixed(2)}</TableCell>
                                   <TableCell>
-                                    {new Date(order.created_at).toLocaleDateString([], {
+                                    {new Date(order.createdAt).toLocaleDateString([], {
                                       year: 'numeric',
                                       month: 'short',
                                       day: 'numeric'
                                     })}
                                   </TableCell>
                                   <TableCell>
-                                    <Badge variant="outline" className={`${paymentStatusColor(order.payment_status)} text-white border-0`}>
-                                      {order.payment_status}
+                                    <Badge variant="outline" className={`${paymentStatusColor(order.paymentStatus)} text-white border-0`}>
+                                      {order.paymentStatus}
                                     </Badge>
                                   </TableCell>
                                 </TableRow>
@@ -611,7 +636,7 @@ const StaffBilling = () => {
                         <div className="text-center mb-3">
                           <h3 className="text-lg font-bold">Order #{selectedOrder.id.substring(0, 8)}</h3>
                           <p className="text-xs text-gray-500">
-                            {new Date(selectedOrder.created_at).toLocaleString()}
+                            {new Date(selectedOrder.createdAt).toLocaleString()}
                           </p>
                         </div>
                         
@@ -627,11 +652,11 @@ const StaffBilling = () => {
                         <div className="border-t border-gray-200 pt-2">
                           <div className="flex justify-between font-bold">
                             <span>Total</span>
-                            <span>₹{selectedOrder.total_amount.toFixed(2)}</span>
+                            <span>₹{selectedOrder.totalAmount.toFixed(2)}</span>
                           </div>
                           <div className="flex justify-between text-xs text-gray-500 mt-1">
                             <span>Payment Method</span>
-                            <span>{selectedOrder.payment_method}</span>
+                            <span>{selectedOrder.paymentMethod}</span>
                           </div>
                         </div>
                       </div>
@@ -648,6 +673,7 @@ const StaffBilling = () => {
                         <Button 
                           variant="outline" 
                           className="flex-1 border-[#384374] hover:bg-[#2d375f]"
+                          onClick={handleDownloadBill}
                         >
                           <Download className="h-4 w-4 mr-2" />
                           Download

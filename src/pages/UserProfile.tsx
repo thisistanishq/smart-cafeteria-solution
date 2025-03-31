@@ -1,447 +1,639 @@
 
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { 
   User, 
   Mail, 
   Phone, 
-  Shield, 
-  Calendar, 
-  BookOpen, 
-  Settings, 
-  LogOut,
-  Wallet
+  CreditCard, 
+  History, 
+  Settings,
+  Edit,
+  Save,
+  X,
+  AlertTriangle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useToast } from '@/hooks/use-toast';
+import { Input } from '@/components/ui/input';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Label } from '@/components/ui/label';
 import { NavBar } from '@/components/NavBar';
 import { Footer } from '@/components/Footer';
-import { Separator } from '@/components/ui/separator';
 import { Loader } from '@/components/Loader';
+import { useToast } from '@/hooks/use-toast';
 import { useApp } from '@/context/AppContext';
-import { MobileNavBar } from '@/components/MobileNavBar';
-import { useIsMobile } from '@/hooks/use-mobile';
-import { CookingAnimation } from '@/components/CookingAnimation';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
 
 const UserProfile = () => {
-  const { user, isLoading, logout } = useApp();
+  const { isLoading, isAuthenticated, user, transactions, orders } = useApp();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const isMobile = useIsMobile();
-  const [activeTab, setActiveTab] = useState<'personal' | 'preferences'>('personal');
-  const [cookingType, setCookingType] = useState<'dosa' | 'idli' | 'biryani' | 'poori' | 'friedrice'>('dosa');
   
-  // Cycle through cooking animations
+  const [isEditing, setIsEditing] = useState(false);
+  const [profileData, setProfileData] = useState({
+    name: '',
+    email: '',
+    phone: '',
+  });
+  
+  const [activeTab, setActiveTab] = useState("profile");
+  
+  // Redirect if not authenticated
   useEffect(() => {
-    const animations: Array<'dosa' | 'idli' | 'biryani' | 'poori' | 'friedrice'> = ['dosa', 'idli', 'biryani', 'poori', 'friedrice'];
-    let currentIndex = 0;
-    
-    const intervalId = setInterval(() => {
-      currentIndex = (currentIndex + 1) % animations.length;
-      setCookingType(animations[currentIndex]);
-    }, 5000);
-    
-    return () => clearInterval(intervalId);
-  }, []);
-  
-  const handleLogout = async () => {
-    try {
-      await logout();
+    if (!isLoading && !isAuthenticated) {
       navigate('/login');
-      toast({
-        title: "Logged out successfully",
-        description: "You have been logged out of your account",
+    }
+  }, [isLoading, isAuthenticated, navigate]);
+  
+  // Set initial profile data when user is loaded
+  useEffect(() => {
+    if (user) {
+      setProfileData({
+        name: user.name,
+        email: user.email,
+        phone: user.phone || '',
       });
-    } catch (error) {
-      console.error('Logout error:', error);
-      toast({
-        title: "Logout Error",
-        description: "There was a problem logging out. Please try again.",
-        variant: "destructive",
-      });
+    }
+  }, [user]);
+  
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setProfileData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+  
+  const handleSaveProfile = () => {
+    // In a real application, this would call an API to update the user profile
+    toast({
+      title: "Profile updated",
+      description: "Your profile information has been updated successfully.",
+    });
+    setIsEditing(false);
+  };
+  
+  const getTransactionIcon = (type: string) => {
+    switch(type) {
+      case 'credit':
+      case 'deposit':
+        return <Badge className="bg-green-500/20 text-green-500 border-green-500/20">+</Badge>;
+      case 'debit':
+      case 'payment':
+      case 'withdrawal':
+        return <Badge className="bg-red-500/20 text-red-500 border-red-500/20">-</Badge>;
+      case 'refund':
+        return <Badge className="bg-blue-500/20 text-blue-500 border-blue-500/20">↩</Badge>;
+      default:
+        return <Badge className="bg-gray-500/20 text-gray-500 border-gray-500/20">?</Badge>;
     }
   };
   
-  if (isLoading) {
+  if (isLoading || !user) {
     return <Loader text="Loading profile..." />;
   }
   
-  if (!user) {
-    return (
-      <div className="min-h-screen flex flex-col">
-        {!isMobile && <NavBar />}
-        <div className="flex-grow flex flex-col items-center justify-center p-6">
-          <div className="text-center max-w-md">
-            <User className="h-16 w-16 mx-auto mb-4 text-gray-400" />
-            <h1 className="text-2xl font-bold mb-2">Not Logged In</h1>
-            <p className="text-gray-500 mb-6">
-              Please log in to view your profile and manage your account.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <Button 
-                className="bg-turmeric-500 hover:bg-turmeric-600"
-                onClick={() => navigate('/login')}
-              >
-                Log In
-              </Button>
-              <Button 
-                variant="outline"
-                onClick={() => navigate('/register')}
-              >
-                Register
-              </Button>
-            </div>
-          </div>
-        </div>
-        {isMobile ? <MobileNavBar /> : <Footer />}
-      </div>
-    );
-  }
+  // Filter orders for this user
+  const userOrders = orders.filter(order => order.customerId === user.id);
+  const recentOrders = [...userOrders].sort((a, b) => 
+    new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  ).slice(0, 5);
   
-  // Animation variants for profile sections
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1
-      }
-    }
-  };
-  
-  const itemVariants = {
-    hidden: { y: 20, opacity: 0 },
-    visible: {
-      y: 0,
-      opacity: 1,
-      transition: {
-        type: "spring",
-        stiffness: 300,
-        damping: 30
-      }
-    }
-  };
+  // Filter transactions for this user
+  const userTransactions = transactions.filter(transaction => transaction.userId === user.id);
+  const recentTransactions = [...userTransactions].sort((a, b) => 
+    new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  ).slice(0, 5);
   
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-b from-[#0c1329] to-[#131b38]">
-      {!isMobile && <NavBar />}
+    <div className="min-h-screen bg-[#0c1329]">
+      <NavBar />
       
-      <main className="flex-grow p-6 md:p-8">
-        <div className="max-w-5xl mx-auto">
+      <main className="py-10 px-4 md:px-6 lg:px-8">
+        <div className="max-w-6xl mx-auto">
           <motion.div
-            initial="hidden"
-            animate="visible"
-            variants={containerVariants}
-            className="mb-8"
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
           >
-            <motion.h1 
-              variants={itemVariants}
-              className="text-3xl font-bold mb-2 text-white"
-            >
-              My Profile
-            </motion.h1>
-            <motion.p 
-              variants={itemVariants}
-              className="text-gray-400"
-            >
-              Manage your personal information and preferences
-            </motion.p>
+            <h1 className="text-3xl font-bold mb-2 text-white">User Profile</h1>
+            <p className="text-gray-400 mb-8">View and manage your account information</p>
           </motion.div>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {/* User Card */}
-            <motion.div
-              initial={{ x: -50, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              transition={{ type: "spring", damping: 20 }}
-            >
-              <div className="rounded-xl overflow-hidden bg-[#192244] border border-[#384374] shadow-xl text-white">
-                <div className="relative h-32 bg-[#212a4e]">
-                  <div className="absolute top-0 left-0 w-full h-full opacity-40 bg-gradient-to-br from-[#4a5680] to-transparent"></div>
-                  
-                  {/* Decorative elements */}
-                  <div className="absolute top-3 left-3 w-16 h-16 rounded-full bg-[#4a5680] opacity-20"></div>
-                  <div className="absolute bottom-3 right-3 w-8 h-8 rounded-full bg-[#4a5680] opacity-20"></div>
-                </div>
-                
-                <div className="relative px-6 pb-6">
-                  <div className="absolute -top-12 left-6">
-                    <div className="w-24 h-24 rounded-full bg-[#131b38] border-4 border-[#192244] flex items-center justify-center">
-                      <User className="h-12 w-12 text-white" strokeWidth={1.5} />
-                    </div>
-                  </div>
-                  
-                  <div className="pt-16">
-                    <h2 className="text-xl font-bold">{user.name}</h2>
-                    <p className="text-gray-400 flex items-center mt-1">
-                      <Shield className="h-4 w-4 mr-1" />
-                      {user.role.replace('_', ' ').charAt(0).toUpperCase() + user.role.replace('_', ' ').slice(1)}
-                    </p>
-                    
-                    <Separator className="my-4 bg-[#384374]" />
-                    
-                    <div className="space-y-3">
-                      <div className="flex items-center">
-                        <Mail className="h-4 w-4 mr-3 text-[#4a5680]" />
-                        <p className="text-sm">{user.email}</p>
-                      </div>
-                      {user.phone && (
-                        <div className="flex items-center">
-                          <Phone className="h-4 w-4 mr-3 text-[#4a5680]" />
-                          <p className="text-sm">{user.phone}</p>
-                        </div>
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+            {/* Sidebar */}
+            <div className="lg:col-span-1">
+              <Card className="bg-[#192244] border-[#384374] text-white shadow-lg">
+                <CardContent className="p-6">
+                  <div className="flex flex-col items-center space-y-4">
+                    <Avatar className="w-24 h-24 border-4 border-[#384374]">
+                      {user.profileImageUrl ? (
+                        <AvatarImage src={user.profileImageUrl} alt={user.name} />
+                      ) : (
+                        <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-2xl">
+                          {user.name.charAt(0)}
+                        </AvatarFallback>
                       )}
-                      <div className="flex items-center">
-                        <Wallet className="h-4 w-4 mr-3 text-[#4a5680]" />
-                        <p className="text-sm">₹{user.walletBalance.toFixed(2)}</p>
-                      </div>
-                      <div className="flex items-center">
-                        <Calendar className="h-4 w-4 mr-3 text-[#4a5680]" />
-                        <p className="text-sm">Joined {new Date().toLocaleDateString()}</p>
-                      </div>
+                    </Avatar>
+                    
+                    <div className="text-center">
+                      <h2 className="text-xl font-bold">{user.name}</h2>
+                      <p className="text-gray-400 text-sm">{user.email}</p>
+                      <Badge className="mt-2 bg-blue-500/20 text-blue-400 border-blue-500/20">
+                        {user.role.replace('_', ' ')}
+                      </Badge>
                     </div>
                     
-                    <div className="mt-6">
-                      <Button 
-                        variant="outline" 
-                        className="w-full border-[#384374] hover:bg-[#2d375f]"
-                        onClick={handleLogout}
-                      >
-                        <LogOut className="h-4 w-4 mr-2" />
-                        Logout
-                      </Button>
+                    <div className="bg-[#131b38] rounded-lg p-4 w-full">
+                      <div className="flex justify-between items-center mb-1">
+                        <h3 className="font-medium">Wallet Balance</h3>
+                        <button 
+                          className="text-xs text-blue-400 hover:text-blue-300"
+                          onClick={() => navigate('/wallet')}
+                        >
+                          Top Up
+                        </button>
+                      </div>
+                      <div className="text-2xl font-bold">₹{user.walletBalance.toFixed(2)}</div>
                     </div>
                   </div>
-                </div>
-              </div>
-            </motion.div>
+                  
+                  <div className="mt-6 space-y-2">
+                    <Button 
+                      variant="outline" 
+                      className="w-full border-[#384374] hover:bg-[#131b38] justify-start"
+                      onClick={() => setActiveTab("profile")}
+                    >
+                      <User className="mr-2 h-4 w-4" />
+                      Profile Information
+                    </Button>
+                    
+                    <Button 
+                      variant="outline" 
+                      className="w-full border-[#384374] hover:bg-[#131b38] justify-start"
+                      onClick={() => setActiveTab("orders")}
+                    >
+                      <History className="mr-2 h-4 w-4" />
+                      Order History
+                    </Button>
+                    
+                    <Button 
+                      variant="outline" 
+                      className="w-full border-[#384374] hover:bg-[#131b38] justify-start"
+                      onClick={() => setActiveTab("transactions")}
+                    >
+                      <CreditCard className="mr-2 h-4 w-4" />
+                      Transactions
+                    </Button>
+                    
+                    <Button 
+                      variant="outline" 
+                      className="w-full border-[#384374] hover:bg-[#131b38] justify-start"
+                      onClick={() => setActiveTab("settings")}
+                    >
+                      <Settings className="mr-2 h-4 w-4" />
+                      Account Settings
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
             
             {/* Main Content */}
-            <motion.div 
-              className="md:col-span-2"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.2 }}
-            >
-              {/* Tabs */}
-              <div className="flex border-b border-[#384374] mb-6">
-                <button
-                  className={`py-3 px-6 font-medium text-sm ${
-                    activeTab === 'personal' 
-                      ? 'text-white border-b-2 border-[#4a5680]' 
-                      : 'text-gray-400 hover:text-white'
-                  }`}
-                  onClick={() => setActiveTab('personal')}
-                >
-                  Personal Information
-                </button>
-                <button
-                  className={`py-3 px-6 font-medium text-sm ${
-                    activeTab === 'preferences' 
-                      ? 'text-white border-b-2 border-[#4a5680]' 
-                      : 'text-gray-400 hover:text-white'
-                  }`}
-                  onClick={() => setActiveTab('preferences')}
-                >
-                  Preferences
-                </button>
-              </div>
-              
-              {/* Personal Info Tab */}
-              {activeTab === 'personal' && (
-                <motion.div 
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="space-y-6 text-white"
-                >
-                  <div className="bg-[#192244] rounded-xl p-6 border border-[#384374]">
-                    <h3 className="text-lg font-medium mb-4 flex items-center">
-                      <User className="h-5 w-5 mr-2" />
-                      Account Details
-                    </h3>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div>
-                        <label className="text-sm text-gray-400 block mb-1">Full Name</label>
-                        <div className="bg-[#131b38] p-3 rounded-md border border-[#384374]">
-                          {user.name}
-                        </div>
-                      </div>
-                      <div>
-                        <label className="text-sm text-gray-400 block mb-1">Email Address</label>
-                        <div className="bg-[#131b38] p-3 rounded-md border border-[#384374]">
-                          {user.email}
-                        </div>
-                      </div>
-                      <div>
-                        <label className="text-sm text-gray-400 block mb-1">Phone Number</label>
-                        <div className="bg-[#131b38] p-3 rounded-md border border-[#384374]">
-                          {user.phone || 'Not provided'}
-                        </div>
-                      </div>
-                      <div>
-                        <label className="text-sm text-gray-400 block mb-1">Role</label>
-                        <div className="bg-[#131b38] p-3 rounded-md border border-[#384374]">
-                          {user.role.replace('_', ' ').charAt(0).toUpperCase() + user.role.replace('_', ' ').slice(1)}
-                        </div>
-                      </div>
+            <div className="lg:col-span-3">
+              {activeTab === "profile" && (
+                <Card className="bg-[#192244] border-[#384374] text-white shadow-lg">
+                  <CardHeader className="flex flex-row items-center justify-between">
+                    <div>
+                      <CardTitle>Profile Information</CardTitle>
+                      <CardDescription className="text-gray-400">
+                        Your personal information and preferences
+                      </CardDescription>
                     </div>
                     
-                    <div className="mt-6">
+                    {!isEditing ? (
                       <Button 
                         variant="outline" 
-                        className="border-[#384374] hover:bg-[#2d375f]"
+                        size="icon"
+                        onClick={() => setIsEditing(true)}
+                        className="border-[#384374] hover:bg-[#131b38]"
                       >
-                        <Settings className="h-4 w-4 mr-2" />
-                        Edit Profile
+                        <Edit className="h-4 w-4" />
                       </Button>
-                    </div>
-                  </div>
+                    ) : (
+                      <div className="flex space-x-2">
+                        <Button 
+                          variant="outline" 
+                          size="icon"
+                          onClick={() => setIsEditing(false)}
+                          className="border-[#384374] hover:bg-[#131b38]"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                        
+                        <Button 
+                          variant="outline" 
+                          size="icon"
+                          onClick={handleSaveProfile}
+                          className="border-[#384374] hover:bg-[#131b38]"
+                        >
+                          <Save className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
+                  </CardHeader>
                   
-                  <div className="bg-[#192244] rounded-xl p-6 border border-[#384374]">
-                    <h3 className="text-lg font-medium mb-4 flex items-center">
-                      <Wallet className="h-5 w-5 mr-2" />
-                      Wallet
-                    </h3>
-                    
-                    <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-                      <div>
-                        <p className="text-sm text-gray-400 mb-1">Current Balance</p>
-                        <p className="text-3xl font-bold">₹{user.walletBalance.toFixed(2)}</p>
+                  <CardContent className="space-y-6">
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="name" className="text-gray-400">Full Name</Label>
+                        {isEditing ? (
+                          <Input
+                            id="name"
+                            name="name"
+                            value={profileData.name}
+                            onChange={handleInputChange}
+                            className="bg-[#131b38] border-[#384374] text-white"
+                          />
+                        ) : (
+                          <div className="flex items-center space-x-2 p-2 rounded-md bg-[#131b38]">
+                            <User className="h-4 w-4 text-gray-400" />
+                            <span>{profileData.name}</span>
+                          </div>
+                        )}
                       </div>
                       
-                      <Button 
-                        className="mt-4 md:mt-0 bg-[#212a4e] hover:bg-[#2d375f]"
-                        onClick={() => navigate('/wallet')}
-                      >
-                        Manage Wallet
-                      </Button>
+                      <div className="space-y-2">
+                        <Label htmlFor="email" className="text-gray-400">Email Address</Label>
+                        {isEditing ? (
+                          <Input
+                            id="email"
+                            name="email"
+                            value={profileData.email}
+                            onChange={handleInputChange}
+                            className="bg-[#131b38] border-[#384374] text-white"
+                          />
+                        ) : (
+                          <div className="flex items-center space-x-2 p-2 rounded-md bg-[#131b38]">
+                            <Mail className="h-4 w-4 text-gray-400" />
+                            <span>{profileData.email}</span>
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="phone" className="text-gray-400">Phone Number</Label>
+                        {isEditing ? (
+                          <Input
+                            id="phone"
+                            name="phone"
+                            value={profileData.phone}
+                            onChange={handleInputChange}
+                            className="bg-[#131b38] border-[#384374] text-white"
+                          />
+                        ) : (
+                          <div className="flex items-center space-x-2 p-2 rounded-md bg-[#131b38]">
+                            <Phone className="h-4 w-4 text-gray-400" />
+                            <span>{profileData.phone || 'Not provided'}</span>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                  
-                  {/* Cooking Animation Card */}
-                  <div className="bg-[#192244] rounded-xl p-6 border border-[#384374]">
-                    <h3 className="text-lg font-medium mb-4 flex items-center">
-                      <BookOpen className="h-5 w-5 mr-2" />
-                      Today's Special
-                    </h3>
                     
-                    <div className="h-64 flex items-center justify-center">
-                      <CookingAnimation type={cookingType} className="h-full w-full" />
+                    <div className="pt-4 border-t border-[#384374]">
+                      <h3 className="text-lg font-medium mb-4">Account Overview</h3>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <Card className="bg-[#131b38] border-[#384374]">
+                          <CardContent className="p-4">
+                            <div className="text-sm text-gray-400">Account Type</div>
+                            <div className="text-lg font-medium">{user.role.replace('_', ' ')}</div>
+                          </CardContent>
+                        </Card>
+                        
+                        <Card className="bg-[#131b38] border-[#384374]">
+                          <CardContent className="p-4">
+                            <div className="text-sm text-gray-400">Total Orders</div>
+                            <div className="text-lg font-medium">{userOrders.length}</div>
+                          </CardContent>
+                        </Card>
+                        
+                        <Card className="bg-[#131b38] border-[#384374]">
+                          <CardContent className="p-4">
+                            <div className="text-sm text-gray-400">Member Since</div>
+                            <div className="text-lg font-medium">July 2023</div>
+                          </CardContent>
+                        </Card>
+                      </div>
                     </div>
-                    
-                    <div className="mt-4 text-center">
-                      <Button 
-                        className="bg-[#212a4e] hover:bg-[#2d375f]"
-                        onClick={() => navigate('/menu')}
-                      >
-                        Explore Menu
-                      </Button>
-                    </div>
-                  </div>
-                </motion.div>
+                  </CardContent>
+                </Card>
               )}
               
-              {/* Preferences Tab */}
-              {activeTab === 'preferences' && (
-                <motion.div 
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="space-y-6 text-white"
-                >
-                  <div className="bg-[#192244] rounded-xl p-6 border border-[#384374]">
-                    <h3 className="text-lg font-medium mb-4">Notification Preferences</h3>
-                    
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <label className="flex-grow">
-                          <span className="text-sm">Order Updates</span>
-                        </label>
-                        <input 
-                          type="checkbox" 
-                          className="w-5 h-5 rounded accent-[#4a5680]" 
-                          defaultChecked
-                        />
-                      </div>
-                      
-                      <div className="flex items-center justify-between">
-                        <label className="flex-grow">
-                          <span className="text-sm">Special Offers</span>
-                        </label>
-                        <input 
-                          type="checkbox" 
-                          className="w-5 h-5 rounded accent-[#4a5680]" 
-                          defaultChecked
-                        />
-                      </div>
-                      
-                      <div className="flex items-center justify-between">
-                        <label className="flex-grow">
-                          <span className="text-sm">New Menu Items</span>
-                        </label>
-                        <input 
-                          type="checkbox" 
-                          className="w-5 h-5 rounded accent-[#4a5680]" 
-                          defaultChecked
-                        />
-                      </div>
-                    </div>
-                  </div>
+              {activeTab === "orders" && (
+                <Card className="bg-[#192244] border-[#384374] text-white shadow-lg">
+                  <CardHeader>
+                    <CardTitle>Order History</CardTitle>
+                    <CardDescription className="text-gray-400">
+                      Track and review your past orders
+                    </CardDescription>
+                  </CardHeader>
                   
-                  <div className="bg-[#192244] rounded-xl p-6 border border-[#384374]">
-                    <h3 className="text-lg font-medium mb-4">Dietary Preferences</h3>
+                  <CardContent>
+                    {recentOrders.length > 0 ? (
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="hover:bg-[#131b38] border-[#384374]">
+                            <TableHead className="text-gray-400">Order ID</TableHead>
+                            <TableHead className="text-gray-400">Date</TableHead>
+                            <TableHead className="text-gray-400">Amount</TableHead>
+                            <TableHead className="text-gray-400">Status</TableHead>
+                            <TableHead className="text-gray-400">Actions</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {recentOrders.map((order) => (
+                            <TableRow key={order.id} className="hover:bg-[#131b38] border-[#384374]">
+                              <TableCell className="font-medium">
+                                #{order.id.substring(0, 8)}
+                              </TableCell>
+                              <TableCell>
+                                {new Date(order.createdAt).toLocaleDateString()}
+                              </TableCell>
+                              <TableCell>₹{order.totalAmount.toFixed(2)}</TableCell>
+                              <TableCell>
+                                <Badge className={`${
+                                  order.status === 'completed' 
+                                    ? 'bg-green-500/20 text-green-400' 
+                                    : order.status === 'cancelled'
+                                      ? 'bg-red-500/20 text-red-400'
+                                      : 'bg-yellow-500/20 text-yellow-400'
+                                }`}>
+                                  {order.status}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                <Button 
+                                  variant="outline"
+                                  size="sm"
+                                  className="border-[#384374] hover:bg-[#131b38]"
+                                  onClick={() => navigate(`/orders/${order.id}`)}
+                                >
+                                  View Details
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center py-8 text-center">
+                        <AlertTriangle className="h-12 w-12 text-gray-500 mb-4" />
+                        <h3 className="text-lg font-medium mb-2">No orders found</h3>
+                        <p className="text-sm text-gray-400 mb-6">
+                          You haven't placed any orders yet
+                        </p>
+                        <Button 
+                          onClick={() => navigate('/menu')}
+                          className="bg-blue-600 hover:bg-blue-700"
+                        >
+                          Browse Menu
+                        </Button>
+                      </div>
+                    )}
                     
+                    {recentOrders.length > 0 && (
+                      <div className="mt-4 text-center">
+                        <Button 
+                          variant="outline"
+                          className="border-[#384374] hover:bg-[#131b38]"
+                          onClick={() => navigate('/orders')}
+                        >
+                          View All Orders
+                        </Button>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+              
+              {activeTab === "transactions" && (
+                <Card className="bg-[#192244] border-[#384374] text-white shadow-lg">
+                  <CardHeader>
+                    <CardTitle>Wallet Transactions</CardTitle>
+                    <CardDescription className="text-gray-400">
+                      Review your wallet activities and transactions
+                    </CardDescription>
+                  </CardHeader>
+                  
+                  <CardContent>
+                    {recentTransactions.length > 0 ? (
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="hover:bg-[#131b38] border-[#384374]">
+                            <TableHead className="text-gray-400">Transaction</TableHead>
+                            <TableHead className="text-gray-400">Date</TableHead>
+                            <TableHead className="text-gray-400">Amount</TableHead>
+                            <TableHead className="text-gray-400">Description</TableHead>
+                            <TableHead className="text-gray-400">Status</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {recentTransactions.map((transaction) => (
+                            <TableRow key={transaction.id} className="hover:bg-[#131b38] border-[#384374]">
+                              <TableCell>
+                                <div className="flex items-center space-x-2">
+                                  {getTransactionIcon(transaction.type)}
+                                  <span className="font-medium">
+                                    {transaction.type.charAt(0).toUpperCase() + transaction.type.slice(1)}
+                                  </span>
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                {new Date(transaction.createdAt).toLocaleDateString()}
+                              </TableCell>
+                              <TableCell className={
+                                transaction.type === 'credit' || transaction.type === 'deposit' || transaction.type === 'refund'
+                                  ? 'text-green-400'
+                                  : 'text-red-400'
+                              }>
+                                {(transaction.type === 'credit' || transaction.type === 'deposit' || transaction.type === 'refund' ? '+' : '-')}₹{transaction.amount.toFixed(2)}
+                              </TableCell>
+                              <TableCell>{transaction.description || 'No description'}</TableCell>
+                              <TableCell>
+                                <Badge className={`${
+                                  transaction.status === 'completed' 
+                                    ? 'bg-green-500/20 text-green-400' 
+                                    : transaction.status === 'failed'
+                                      ? 'bg-red-500/20 text-red-400'
+                                      : 'bg-yellow-500/20 text-yellow-400'
+                                }`}>
+                                  {transaction.status}
+                                </Badge>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center py-8 text-center">
+                        <AlertTriangle className="h-12 w-12 text-gray-500 mb-4" />
+                        <h3 className="text-lg font-medium mb-2">No transactions found</h3>
+                        <p className="text-sm text-gray-400 mb-6">
+                          You haven't made any wallet transactions yet
+                        </p>
+                        <Button 
+                          onClick={() => navigate('/wallet')}
+                          className="bg-blue-600 hover:bg-blue-700"
+                        >
+                          Go to Wallet
+                        </Button>
+                      </div>
+                    )}
+                    
+                    {recentTransactions.length > 0 && (
+                      <div className="mt-4 text-center">
+                        <Button 
+                          variant="outline"
+                          className="border-[#384374] hover:bg-[#131b38]"
+                          onClick={() => navigate('/wallet')}
+                        >
+                          View All Transactions
+                        </Button>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+              
+              {activeTab === "settings" && (
+                <Card className="bg-[#192244] border-[#384374] text-white shadow-lg">
+                  <CardHeader>
+                    <CardTitle>Account Settings</CardTitle>
+                    <CardDescription className="text-gray-400">
+                      Manage your account settings and preferences
+                    </CardDescription>
+                  </CardHeader>
+                  
+                  <CardContent className="space-y-6">
                     <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <label className="flex-grow">
-                          <span className="text-sm">Vegetarian</span>
-                        </label>
-                        <input 
-                          type="checkbox" 
-                          className="w-5 h-5 rounded accent-[#4a5680]" 
-                        />
-                      </div>
+                      <h3 className="text-lg font-medium">Notification Preferences</h3>
                       
-                      <div className="flex items-center justify-between">
-                        <label className="flex-grow">
-                          <span className="text-sm">Vegan</span>
-                        </label>
-                        <input 
-                          type="checkbox" 
-                          className="w-5 h-5 rounded accent-[#4a5680]" 
-                        />
-                      </div>
-                      
-                      <div className="flex items-center justify-between">
-                        <label className="flex-grow">
-                          <span className="text-sm">Gluten-Free</span>
-                        </label>
-                        <input 
-                          type="checkbox" 
-                          className="w-5 h-5 rounded accent-[#4a5680]" 
-                        />
-                      </div>
-                      
-                      <div className="flex items-center justify-between">
-                        <label className="flex-grow">
-                          <span className="text-sm">Low-Sugar</span>
-                        </label>
-                        <input 
-                          type="checkbox" 
-                          className="w-5 h-5 rounded accent-[#4a5680]" 
-                        />
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <Label htmlFor="email-notifications" className="block mb-1">
+                              Email Notifications
+                            </Label>
+                            <p className="text-sm text-gray-400">
+                              Receive order updates and promotional offers
+                            </p>
+                          </div>
+                          <input
+                            type="checkbox"
+                            id="email-notifications"
+                            className="toggle toggle-primary"
+                            defaultChecked
+                          />
+                        </div>
+                        
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <Label htmlFor="order-updates" className="block mb-1">
+                              Order Status Updates
+                            </Label>
+                            <p className="text-sm text-gray-400">
+                              Get notified when your order status changes
+                            </p>
+                          </div>
+                          <input
+                            type="checkbox"
+                            id="order-updates"
+                            className="toggle toggle-primary"
+                            defaultChecked
+                          />
+                        </div>
+                        
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <Label htmlFor="marketing" className="block mb-1">
+                              Marketing Communications
+                            </Label>
+                            <p className="text-sm text-gray-400">
+                              Receive special offers and promotions
+                            </p>
+                          </div>
+                          <input
+                            type="checkbox"
+                            id="marketing"
+                            className="toggle toggle-primary"
+                          />
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </motion.div>
+                    
+                    <div className="space-y-4 pt-4 border-t border-[#384374]">
+                      <h3 className="text-lg font-medium">Security</h3>
+                      
+                      <Button
+                        variant="outline"
+                        className="w-full border-[#384374] hover:bg-[#131b38] text-left justify-start"
+                      >
+                        Change Password
+                      </Button>
+                      
+                      <Button
+                        variant="outline"
+                        className="w-full border-[#384374] hover:bg-[#131b38] text-left justify-start"
+                      >
+                        Two-Factor Authentication
+                      </Button>
+                    </div>
+                    
+                    <div className="space-y-4 pt-4 border-t border-[#384374]">
+                      <h3 className="text-lg font-medium">Danger Zone</h3>
+                      
+                      <Button
+                        variant="destructive"
+                        className="w-full"
+                      >
+                        Delete Account
+                      </Button>
+                    </div>
+                  </CardContent>
+                  
+                  <CardFooter>
+                    <Button 
+                      className="bg-blue-600 hover:bg-blue-700"
+                      onClick={() => {
+                        toast({
+                          title: "Settings saved",
+                          description: "Your account settings have been saved.",
+                        });
+                      }}
+                    >
+                      Save Changes
+                    </Button>
+                  </CardFooter>
+                </Card>
               )}
-            </motion.div>
+            </div>
           </div>
         </div>
       </main>
       
-      {isMobile ? <MobileNavBar /> : <Footer />}
+      <Footer />
     </div>
   );
 };

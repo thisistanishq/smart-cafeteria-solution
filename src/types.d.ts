@@ -8,11 +8,15 @@ export interface MenuItem {
   category: MenuCategory;
   veg: boolean;
   rating?: number;
-  status?: 'available' | 'out_of_stock' | 'coming_soon';
+  status: 'available' | 'out_of_stock' | 'coming_soon' | 'unavailable';
   preparation_time?: number;
+  prepTime?: number;
   calories?: number;
   tags?: string[];
   totalOrders?: number;
+  vegetarian?: boolean;
+  bestSeller?: boolean;
+  ingredients?: string[];
 }
 
 export type MenuCategory = 
@@ -25,9 +29,10 @@ export type MenuCategory =
   | 'main_course' 
   | 'curry' 
   | 'rice' 
-  | 'bread';
+  | 'bread'
+  | 'snacks';
 
-export interface CartItemType {
+export interface CartItem {
   itemId: string;
   name: string;
   price: number;
@@ -37,24 +42,27 @@ export interface CartItemType {
   specialInstructions?: string;
 }
 
+export type OrderItem = CartItem;
+
 export interface Order {
   id: string;
+  customerId: string;
   customerName: string;
   customerEmail?: string;
-  items: CartItemType[];
+  items: CartItem[];
   totalAmount: number;
   status: OrderStatus;
   paymentStatus: PaymentStatus;
   paymentMethod: PaymentMethod;
-  createdAt: Date;
-  completedAt?: Date;
-  estimatedReadyTime?: Date;
+  createdAt: string;
+  completedAt?: string;
+  estimatedReadyTime?: string;
   specialInstructions?: string;
   razorpayPaymentId?: string;
 }
 
-export type OrderStatus = 'pending' | 'preparing' | 'ready' | 'completed' | 'cancelled';
-export type PaymentStatus = 'pending' | 'paid' | 'failed' | 'refunded';
+export type OrderStatus = 'pending' | 'preparing' | 'ready' | 'completed' | 'cancelled' | 'confirmed';
+export type PaymentStatus = 'pending' | 'paid' | 'completed' | 'failed' | 'refunded';
 export type PaymentMethod = 'wallet' | 'card' | 'upi' | 'cash' | 'other';
 
 export type UserRole = 'student' | 'staff' | 'cafeteria_staff' | 'admin';
@@ -66,16 +74,18 @@ export interface User {
   role: UserRole;
   walletBalance: number;
   phone?: string;
+  profileImageUrl?: string;
 }
 
 export interface Transaction {
   id: string;
   userId: string;
   amount: number;
-  type: 'credit' | 'debit' | 'refund';
+  type: 'credit' | 'debit' | 'refund' | 'deposit' | 'payment' | 'withdrawal';
   status: 'pending' | 'completed' | 'failed';
-  createdAt: Date;
+  createdAt: string;
   description?: string;
+  reference?: string;
   referenceId?: string;
 }
 
@@ -86,7 +96,11 @@ export interface InventoryItem {
   unit: string;
   category: string;
   threshold: number;
+  thresholdLevel?: number;
   costPerUnit: number;
+  cost?: number;
+  supplier?: string;
+  lastRestocked?: string;
 }
 
 export interface WasteLog {
@@ -98,5 +112,27 @@ export interface WasteLog {
   wasteType: 'expired' | 'damaged' | 'excess' | 'other';
   reason?: string;
   recordedBy?: string;
-  createdAt: Date;
+  createdAt: string;
+}
+
+export interface AIRecommendation {
+  type: 'inventory' | 'menu' | 'pricing' | 'marketing';
+  title: string;
+  description: string;
+  impact: 'low' | 'medium' | 'high';
+  actionable: boolean;
+  data?: any;
+}
+
+export interface SalesAnalytics {
+  period: string;
+  revenue: number;
+  orders: number;
+  averageOrderValue: number;
+  topSellingItems: {
+    itemId: string;
+    name: string;
+    quantity: number;
+    revenue: number;
+  }[];
 }
