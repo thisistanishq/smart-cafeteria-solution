@@ -8,11 +8,11 @@ import {
   Receipt, 
   Download, 
   Clock, 
-  Calendar, 
   FileText,
   CheckCircle,
   XCircle,
-  Filter
+  Filter,
+  CalendarIcon
 } from 'lucide-react';
 import { 
   Table, 
@@ -44,15 +44,25 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { format } from 'date-fns';
 import { Order, CartItem } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 
 interface OrderWithItems extends Order {}
 
+const generateOrderNumber = () => {
+  const timestamp = new Date().getTime();
+  const random = Math.floor(Math.random() * 1000);
+  return `ORD-${timestamp}-${random}`.substring(0, 16);
+};
+
 const BillTemplate = React.forwardRef<HTMLDivElement, { order: OrderWithItems }>((props, ref) => {
   const { order } = props;
   const orderDate = new Date(order.createdAt);
-  const orderNumber = `#${order.id.substring(0, 8)}`;
+  const orderNumber = order.orderNumber || `#${order.id.substring(0, 8)}`;
   
   return (
     <div ref={ref} className="p-8 bg-white text-black max-w-md mx-auto">
@@ -120,11 +130,11 @@ const BillTemplate = React.forwardRef<HTMLDivElement, { order: OrderWithItems }>
       <div className="mb-6">
         <div className="flex justify-between mb-2">
           <span className="font-semibold">Payment Method:</span>
-          <span>{order.paymentMethod}</span>
+          <span className="capitalize">{order.paymentMethod}</span>
         </div>
         <div className="flex justify-between mb-2">
           <span className="font-semibold">Payment Status:</span>
-          <span>{order.paymentStatus}</span>
+          <span className="capitalize">{order.paymentStatus}</span>
         </div>
         {order.razorpayPaymentId && (
           <div className="flex justify-between">
@@ -145,9 +155,9 @@ const BillTemplate = React.forwardRef<HTMLDivElement, { order: OrderWithItems }>
 
 const StaffBilling = () => {
   const { toast } = useToast();
-  const { isLoading, orders, user, isAuthenticated } = useApp();
+  const { isLoading, orders, user, isAuthenticated, updateOrderStatus } = useApp();
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedOrder, setSelectedOrder] = useState<OrderWithItems | null>(null);
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterPayment, setFilterPayment] = useState('all');
@@ -169,7 +179,7 @@ const StaffBilling = () => {
       setIsPrinting(false);
       toast({
         title: "Bill printed successfully",
-        description: `Order #${selectedOrder?.id.substring(0, 8)} bill has been sent to printer`,
+        description: `Order ${selectedOrder?.orderNumber || selectedOrder?.id.substring(0, 8)} bill has been sent to printer`,
       });
     },
   });
@@ -181,12 +191,25 @@ const StaffBilling = () => {
     }
   }, [isLoading, isAuthenticated, user]);
   
+  // Generate order numbers if they don't exist
+  useEffect(() => {
+    if (orders.length > 0) {
+      orders.forEach(order => {
+        if (!order.orderNumber) {
+          order.orderNumber = generateOrderNumber();
+        }
+      });
+    }
+  }, [orders]);
+  
   // Calculate summary stats
   useEffect(() => {
     if (orders.length > 0) {
+      const selectedDateStr = selectedDate ? format(selectedDate, 'yyyy-MM-dd') : '';
+      
       const todaysOrders = orders.filter(order => {
-        const orderDate = new Date(order.createdAt).toISOString().split('T')[0];
-        return orderDate === selectedDate;
+        const orderDate = new Date(order.createdAt);
+        return format(orderDate, 'yyyy-MM-dd') === selectedDateStr;
       });
       
       const totalRev = todaysOrders.reduce((sum, order) => {
@@ -199,16 +222,24 @@ const StaffBilling = () => {
     }
   }, [orders, selectedDate]);
   
+  const formatDateForFilter = (date: Date | undefined) => {
+    if (!date) return '';
+    return format(date, 'yyyy-MM-dd');
+  };
+  
   const filteredOrders = orders.filter(order => {
     const matchesSearch = order.customerName.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          order.id.includes(searchTerm);
+                          order.id.includes(searchTerm) ||
+                          (order.orderNumber && order.orderNumber.includes(searchTerm));
     
     const matchesStatus = filterStatus === 'all' || order.status === filterStatus;
     const matchesPayment = filterPayment === 'all' || order.paymentStatus === filterPayment;
     
     // Filter by selected date
-    const orderDate = new Date(order.createdAt).toISOString().split('T')[0];
-    const matchesDate = orderDate === selectedDate;
+    const orderDate = new Date(order.createdAt);
+    const matchesDate = selectedDate ? 
+      format(orderDate, 'yyyy-MM-dd') === format(selectedDate, 'yyyy-MM-dd') : 
+      true;
     
     return matchesSearch && matchesStatus && matchesPayment && matchesDate;
   });
@@ -251,7 +282,7 @@ const StaffBilling = () => {
     
     // Create bill content
     const orderDate = new Date(selectedOrder.createdAt);
-    const orderNumber = `#${selectedOrder.id.substring(0, 8)}`;
+    const orderNumber = selectedOrder.orderNumber || `#${selectedOrder.id.substring(0, 8)}`;
     
     let billContent = `
       Smart Cafeteria
@@ -292,7 +323,7 @@ const StaffBilling = () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `order-${orderNumber}.txt`;
+    a.download = `${orderNumber.replace(/[^a-zA-Z0-9]/g, '')}.txt`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -302,6 +333,16 @@ const StaffBilling = () => {
       title: "Bill downloaded",
       description: `Order ${orderNumber} bill has been downloaded`,
     });
+  };
+  
+  const handleMarkAsPaid = async (order: Order) => {
+    if (order.paymentStatus !== 'completed' && order.paymentStatus !== 'paid') {
+      await updateOrderStatus(order.id, order.status, { paymentStatus: 'completed' });
+      toast({
+        title: "Payment updated",
+        description: `Order ${order.orderNumber || order.id.substring(0, 8)} has been marked as paid`,
+      });
+    }
   };
   
   return (
@@ -413,19 +454,33 @@ const StaffBilling = () => {
                           <div className="relative">
                             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                             <Input
-                              placeholder="Search by name or ID..."
+                              placeholder="Search by name or order #..."
                               className="pl-10 bg-[#131b38] border-[#384374] text-white"
                               value={searchTerm}
                               onChange={(e) => setSearchTerm(e.target.value)}
                             />
                           </div>
                           
-                          <Input
-                            type="date"
-                            className="bg-[#131b38] border-[#384374] text-white"
-                            value={selectedDate}
-                            onChange={(e) => setSelectedDate(e.target.value)}
-                          />
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="outline"
+                                className="w-[240px] justify-start text-left font-normal bg-[#131b38] border-[#384374] text-white"
+                              >
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {selectedDate ? format(selectedDate, 'PPP') : <span>Pick a date</span>}
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0 bg-[#131b38] border-[#384374] text-white">
+                              <Calendar
+                                mode="single"
+                                selected={selectedDate}
+                                onSelect={setSelectedDate}
+                                initialFocus
+                                className="bg-[#131b38] text-white"
+                              />
+                            </PopoverContent>
+                          </Popover>
                         </div>
                       </div>
                     </CardHeader>
@@ -495,7 +550,7 @@ const StaffBilling = () => {
                         <Table>
                           <TableHeader>
                             <TableRow className="hover:bg-[#212a4e] border-[#384374]">
-                              <TableHead className="text-gray-300">Order ID</TableHead>
+                              <TableHead className="text-gray-300">Order #</TableHead>
                               <TableHead className="text-gray-300">Customer</TableHead>
                               <TableHead className="text-gray-300">Time</TableHead>
                               <TableHead className="text-gray-300">Amount</TableHead>
@@ -513,7 +568,7 @@ const StaffBilling = () => {
                                   onClick={() => setSelectedOrder(order)}
                                 >
                                   <TableCell className="font-medium">
-                                    #{order.id.substring(0, 8)}
+                                    {order.orderNumber || `#${order.id.substring(0, 8)}`}
                                   </TableCell>
                                   <TableCell>{order.customerName}</TableCell>
                                   <TableCell className="whitespace-nowrap">
@@ -529,28 +584,44 @@ const StaffBilling = () => {
                                   </TableCell>
                                   <TableCell>₹{order.totalAmount.toFixed(2)}</TableCell>
                                   <TableCell>
-                                    <Badge variant="outline" className={`${statusColor(order.status)} text-white border-0`}>
+                                    <Badge variant="outline" className={`${statusColor(order.status)} text-white border-0 capitalize`}>
                                       {order.status}
                                     </Badge>
                                   </TableCell>
                                   <TableCell>
-                                    <Badge variant="outline" className={`${paymentStatusColor(order.paymentStatus)} text-white border-0`}>
+                                    <Badge variant="outline" className={`${paymentStatusColor(order.paymentStatus)} text-white border-0 capitalize`}>
                                       {order.paymentStatus}
                                     </Badge>
                                   </TableCell>
                                   <TableCell className="text-right">
-                                    <Button 
-                                      size="sm" 
-                                      variant="ghost"
-                                      className="h-8 w-8 p-0"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        setSelectedOrder(order);
-                                        setTimeout(() => handlePrint(), 100);
-                                      }}
-                                    >
-                                      <Printer className="h-4 w-4" />
-                                    </Button>
+                                    <div className="flex justify-end space-x-1">
+                                      <Button 
+                                        size="sm" 
+                                        variant="ghost"
+                                        className="h-8 w-8 p-0"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setSelectedOrder(order);
+                                          setTimeout(() => handlePrint(), 100);
+                                        }}
+                                      >
+                                        <Printer className="h-4 w-4" />
+                                      </Button>
+                                      
+                                      {(order.paymentStatus === 'pending' || order.paymentStatus === 'failed') && (
+                                        <Button 
+                                          size="sm" 
+                                          variant="ghost"
+                                          className="h-8 w-8 p-0"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleMarkAsPaid(order);
+                                          }}
+                                        >
+                                          <CheckCircle className="h-4 w-4" />
+                                        </Button>
+                                      )}
+                                    </div>
                                   </TableCell>
                                 </TableRow>
                               ))
@@ -596,7 +667,7 @@ const StaffBilling = () => {
                                   <TableCell className="font-medium">
                                     {order.razorpayPaymentId?.substring(0, 12)}...
                                   </TableCell>
-                                  <TableCell>{order.paymentMethod}</TableCell>
+                                  <TableCell className="capitalize">{order.paymentMethod}</TableCell>
                                   <TableCell>₹{order.totalAmount.toFixed(2)}</TableCell>
                                   <TableCell>
                                     {new Date(order.createdAt).toLocaleDateString([], {
@@ -606,7 +677,7 @@ const StaffBilling = () => {
                                     })}
                                   </TableCell>
                                   <TableCell>
-                                    <Badge variant="outline" className={`${paymentStatusColor(order.paymentStatus)} text-white border-0`}>
+                                    <Badge variant="outline" className={`${paymentStatusColor(order.paymentStatus)} text-white border-0 capitalize`}>
                                       {order.paymentStatus}
                                     </Badge>
                                   </TableCell>
@@ -634,7 +705,9 @@ const StaffBilling = () => {
                     <div className="space-y-4">
                       <div className="bg-white text-black rounded-lg p-4 overflow-hidden">
                         <div className="text-center mb-3">
-                          <h3 className="text-lg font-bold">Order #{selectedOrder.id.substring(0, 8)}</h3>
+                          <h3 className="text-lg font-bold">
+                            Order {selectedOrder.orderNumber || `#${selectedOrder.id.substring(0, 8)}`}
+                          </h3>
                           <p className="text-xs text-gray-500">
                             {new Date(selectedOrder.createdAt).toLocaleString()}
                           </p>
@@ -656,7 +729,7 @@ const StaffBilling = () => {
                           </div>
                           <div className="flex justify-between text-xs text-gray-500 mt-1">
                             <span>Payment Method</span>
-                            <span>{selectedOrder.paymentMethod}</span>
+                            <span className="capitalize">{selectedOrder.paymentMethod}</span>
                           </div>
                         </div>
                       </div>
@@ -680,15 +753,15 @@ const StaffBilling = () => {
                         </Button>
                       </div>
                       
-                      <div className="text-sm text-center text-gray-400">
-                        <p>Need to generate a GST invoice?</p>
+                      {selectedOrder.paymentStatus === 'pending' && (
                         <Button 
-                          variant="link" 
-                          className="text-[#4a5680] hover:text-white p-0 h-auto"
+                          className="w-full bg-green-600 hover:bg-green-700"
+                          onClick={() => handleMarkAsPaid(selectedOrder)}
                         >
-                          Create Tax Invoice
+                          <CheckCircle className="h-4 w-4 mr-2" />
+                          Mark as Paid
                         </Button>
-                      </div>
+                      )}
                     </div>
                   ) : (
                     <div className="flex flex-col items-center justify-center py-8 text-center">

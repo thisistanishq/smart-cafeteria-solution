@@ -1,468 +1,334 @@
+
 import React, { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { X, Send, Bot, Loader2 } from 'lucide-react';
+import { Send, ShoppingCart, Wallet, X, Maximize2, Minimize2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { useApp } from '@/context/AppContext';
-import { motion, AnimatePresence } from 'framer-motion';
+import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
+import { useApp } from '@/context/AppContext';
 import { MenuItem } from '@/types';
 
 interface ChatMessage {
-  sender: 'user' | 'bot';
+  id: string;
+  role: 'user' | 'assistant';
   content: string;
   timestamp: Date;
 }
 
-export const MovableChat: React.FC = () => {
-  const { toast } = useToast();
-  const { menuItems, addToCart, user, walletBalance } = useApp();
-  const navigate = useNavigate();
-  
-  const [isOpen, setIsOpen] = useState(false);
-  const [position, setPosition] = useState({ x: window.innerWidth - 100, y: window.innerHeight - 100 });
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
-  const [message, setMessage] = useState('');
+export interface ChatBotProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onMinimize: () => void;
+  onMaximize: () => void;
+  isMinimized: boolean;
+}
+
+export const ChatBot: React.FC<ChatBotProps> = ({ 
+  isOpen, 
+  onClose, 
+  onMinimize, 
+  onMaximize, 
+  isMinimized 
+}) => {
+  const [input, setInput] = useState('');
+  const [activeTab, setActiveTab] = useState('chat');
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
-      sender: 'bot',
-      content: "Hello! I'm your cafeteria assistant. I can help you with menu recommendations, dietary advice, and placing orders. What can I help you with today?",
+      id: '1',
+      role: 'assistant',
+      content: 'Hi! I\'m your smart cafeteria assistant. I can help you order food, check menu items, or answer questions about nutrition. How can I help you today?',
       timestamp: new Date()
     }
   ]);
-  const [isTyping, setIsTyping] = useState(false);
-  
+  const { toast } = useToast();
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const chatRef = useRef<HTMLDivElement>(null);
-  
-  // Scroll to bottom when messages change
+  const { addToCart, menuItems, user, orders } = useApp();
+
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
   }, [messages]);
-  
-  // Ensure the chat bubble stays within the viewport
-  useEffect(() => {
-    const handleResize = () => {
-      setPosition(prev => ({
-        x: Math.min(prev.x, window.innerWidth - 80),
-        y: Math.min(prev.y, window.innerHeight - 80)
-      }));
+
+  const handleSendMessage = () => {
+    if (!input.trim()) return;
+
+    // Add user message
+    const userMessage: ChatMessage = {
+      id: Date.now().toString(),
+      role: 'user',
+      content: input,
+      timestamp: new Date()
     };
-    
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-  
-  const handleMouseDown = (e: React.MouseEvent) => {
-    if (chatRef.current) {
-      const rect = chatRef.current.getBoundingClientRect();
-      setDragOffset({
-        x: e.clientX - rect.left,
-        y: e.clientY - rect.top
-      });
-      setIsDragging(true);
-    }
+
+    setMessages(prevMessages => [...prevMessages, userMessage]);
+    setInput('');
+
+    // Process the message and generate a response
+    setTimeout(() => {
+      const response = processUserMessage(input);
+      setMessages(prevMessages => [...prevMessages, response]);
+    }, 500);
   };
-  
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (isDragging) {
-      const newX = e.clientX - dragOffset.x;
-      const newY = e.clientY - dragOffset.y;
+
+  const processUserMessage = (message: string): ChatMessage => {
+    const lowerMsg = message.toLowerCase();
+    
+    // Check for food order intents
+    if (lowerMsg.includes('order') || lowerMsg.includes('get') || lowerMsg.includes('want')) {
+      // Extract food items from request
+      const foundItems = findMenuItemsInText(lowerMsg);
       
-      // Keep within viewport bounds
-      const maxX = window.innerWidth - (chatRef.current?.offsetWidth || 0);
-      const maxY = window.innerHeight - (chatRef.current?.offsetHeight || 0);
-      
-      setPosition({
-        x: Math.max(0, Math.min(newX, maxX)),
-        y: Math.max(0, Math.min(newY, maxY))
-      });
-    }
-  };
-  
-  const handleMouseUp = () => {
-    setIsDragging(false);
-  };
-  
-  const toggleChat = () => {
-    setIsOpen(!isOpen);
-  };
-  
-  const handleMessageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setMessage(e.target.value);
-  };
-  
-  const findMatchingMenuItems = (query: string): MenuItem[] => {
-    const keywords = query.toLowerCase().split(' ');
-    return menuItems.filter(item => {
-      const nameMatch = keywords.some(keyword => 
-        item.name.toLowerCase().includes(keyword)
-      );
-      const descriptionMatch = item.description && keywords.some(keyword => 
-        item.description.toLowerCase().includes(keyword)
-      );
-      const categoryMatch = keywords.some(keyword => 
-        item.category.toLowerCase().includes(keyword)
-      );
-      const tagMatch = item.tags && keywords.some(keyword => 
-        item.tags?.some(tag => tag.toLowerCase().includes(keyword))
-      );
-      
-      return nameMatch || descriptionMatch || categoryMatch || tagMatch;
-    });
-  };
-  
-  const findItemsByDietaryRestriction = (restriction: string): MenuItem[] => {
-    const vegetarianTerms = ['veg', 'vegetarian', 'plant-based'];
-    const dairyFreeTerms = ['dairy-free', 'no dairy', 'lactose'];
-    const glutenFreeTerms = ['gluten-free', 'no gluten'];
-    
-    if (vegetarianTerms.some(term => restriction.toLowerCase().includes(term))) {
-      return menuItems.filter(item => item.vegetarian || item.veg);
-    }
-    
-    if (dairyFreeTerms.some(term => restriction.toLowerCase().includes(term))) {
-      // This would require more detailed ingredients data
-      return menuItems.filter(item => 
-        item.tags?.includes('dairy-free') || 
-        (item.description && !item.description.toLowerCase().includes('milk') && 
-         !item.description.toLowerCase().includes('cheese') && 
-         !item.description.toLowerCase().includes('cream'))
-      );
-    }
-    
-    if (glutenFreeTerms.some(term => restriction.toLowerCase().includes(term))) {
-      // This would require more detailed ingredients data
-      return menuItems.filter(item => 
-        item.tags?.includes('gluten-free') || 
-        (item.category !== 'bread' && 
-         item.description && !item.description.toLowerCase().includes('wheat') && 
-         !item.description.toLowerCase().includes('gluten'))
-      );
-    }
-    
-    return [];
-  };
-  
-  const findItemsByHealthCondition = (condition: string): MenuItem[] => {
-    const diabetesTerms = ['diabetes', 'diabetic', 'sugar', 'low glycemic'];
-    const heartHealthTerms = ['heart', 'cardiac', 'cholesterol', 'blood pressure'];
-    
-    if (diabetesTerms.some(term => condition.toLowerCase().includes(term))) {
-      // For diabetics, focus on low-carb, high-fiber items
-      return menuItems.filter(item => 
-        (item.tags?.includes('low-carb') || item.tags?.includes('high-fiber')) ||
-        (item.category !== 'dessert' && item.category !== 'bread') ||
-        (item.vegetarian || item.veg)
-      );
-    }
-    
-    if (heartHealthTerms.some(term => condition.toLowerCase().includes(term))) {
-      // For heart health, focus on items that are not fried and are plant-based
-      return menuItems.filter(item => 
-        (item.vegetarian || item.veg) && 
-        (item.description && !item.description.toLowerCase().includes('fried') && 
-         !item.description.toLowerCase().includes('butter'))
-      );
-    }
-    
-    return [];
-  };
-  
-  const checkForOrderIntent = (userMessage: string) => {
-    const orderTerms = ['order', 'get', 'buy', 'purchase', 'want', 'would like', 'I\'d like'];
-    
-    for (const term of orderTerms) {
-      if (userMessage.toLowerCase().includes(term)) {
-        const words = userMessage.toLowerCase().split(' ');
-        const termIndex = words.findIndex(word => word === term || word.includes(term));
+      if (foundItems.length > 0) {
+        // Add items to cart
+        foundItems.forEach(item => {
+          addToCart(item, 1);
+        });
         
-        if (termIndex !== -1 && termIndex < words.length - 1) {
-          const potentialItemName = words.slice(termIndex + 1).join(' ');
-          const matchingItems = findMatchingMenuItems(potentialItemName);
-          
-          if (matchingItems.length > 0) {
-            return matchingItems[0]; // Return the first matching item
-          }
-        }
-      }
-    }
-    
-    return null;
-  };
-  
-  const generateResponse = (userMessage: string): string => {
-    // Check for greetings
-    if (/\b(hi|hello|hey|greetings)\b/i.test(userMessage)) {
-      return "Hello! I'm your cafeteria assistant. How can I help you today?";
-    }
-    
-    // Check for goodbye
-    if (/\b(bye|goodbye|see you|farewell)\b/i.test(userMessage)) {
-      return "Goodbye! Feel free to chat again if you need assistance.";
-    }
-    
-    // Check for help request
-    if (/\b(help|assist|support)\b/i.test(userMessage)) {
-      return "I can help you with: menu recommendations, dietary advice, placing orders, checking your wallet balance, or providing information about the cafeteria.";
-    }
-    
-    // Check for wallet balance inquiry
-    if (/\b(wallet|balance|money|funds)\b/i.test(userMessage)) {
-      if (user) {
-        return `Your current wallet balance is ₹${user.walletBalance.toFixed(2)}. Would you like to add more funds or proceed to order?`;
-      } else {
-        return "You need to be logged in to check your wallet balance. Would you like to go to the login page?";
+        return {
+          id: Date.now().toString(),
+          role: 'assistant',
+          content: `I've added ${foundItems.map(i => i.name).join(', ')} to your cart. Would you like to order anything else or proceed to checkout?`,
+          timestamp: new Date()
+        };
       }
     }
     
     // Check for dietary restrictions
-    if (/\b(vegetarian|vegan|gluten|dairy|lactose|allergic|allergy)\b/i.test(userMessage)) {
-      const matchedItems = findItemsByDietaryRestriction(userMessage);
+    if (lowerMsg.includes('diabetes') || lowerMsg.includes('diabetic')) {
+      const lowSugarItems = menuItems.filter(item => 
+        !item.tags?.includes('sweet') && 
+        item.calories && item.calories < 300 && 
+        item.veg
+      );
       
-      if (matchedItems.length > 0) {
-        const suggestions = matchedItems.slice(0, 3).map(item => item.name).join(', ');
-        return `Based on your dietary preferences, I recommend: ${suggestions}. Would you like to see more details about any of these items?`;
-      } else {
-        return "I couldn't find menu items matching your specific dietary requirements. Please check with our staff for customized options.";
-      }
+      return {
+        id: Date.now().toString(),
+        role: 'assistant',
+        content: `For people with diabetes, I recommend these lower carb options: ${lowSugarItems.slice(0, 3).map(i => i.name).join(', ')}. These items are lower in carbohydrates and have a lower glycemic index.`,
+        timestamp: new Date()
+      };
     }
     
-    // Check for health conditions
-    if (/\b(diabetes|diabetic|heart|cardiac|cholesterol|blood pressure)\b/i.test(userMessage)) {
-      const matchedItems = findItemsByHealthCondition(userMessage);
-      
-      if (matchedItems.length > 0) {
-        const suggestions = matchedItems.slice(0, 3).map(item => item.name).join(', ');
-        return `For your health condition, these menu items might be suitable: ${suggestions}. Would you like more information?`;
-      } else {
-        return "I couldn't find specific menu items for your health condition. Please consult with our staff for personalized recommendations.";
-      }
-    }
-    
-    // Check for recommendation request
-    if (/\b(recommend|suggestion|what's good|popular|best|suggest)\b/i.test(userMessage)) {
-      // Check for specific category recommendations
-      let category = '';
-      
-      if (/\b(breakfast)\b/i.test(userMessage)) {
-        category = 'breakfast';
-      } else if (/\b(lunch)\b/i.test(userMessage)) {
-        category = 'lunch';
-      } else if (/\b(dinner)\b/i.test(userMessage)) {
-        category = 'dinner';
-      } else if (/\b(snack|snacks)\b/i.test(userMessage)) {
-        category = 'snacks';
-      } else if (/\b(beverage|drink|coffee|tea)\b/i.test(userMessage)) {
-        category = 'beverage';
-      } else if (/\b(dessert|sweet)\b/i.test(userMessage)) {
-        category = 'dessert';
-      }
-      
-      if (category) {
-        const categoryItems = menuItems.filter(item => 
-          item.category.toLowerCase() === category.toLowerCase() && 
-          item.status === 'available'
-        );
-        
-        if (categoryItems.length > 0) {
-          // Sort by rating or popularity
-          const sortedItems = [...categoryItems].sort((a, b) => 
-            (b.rating || 0) - (a.rating || 0)
-          );
-          
-          const topItems = sortedItems.slice(0, 3);
-          const suggestions = topItems.map(item => item.name).join(', ');
-          
-          return `For ${category}, I recommend: ${suggestions}. Would you like to order any of these?`;
-        }
-      }
-      
-      // General recommendations
-      const popularItems = [...menuItems]
+    // Check for recommendations
+    if (lowerMsg.includes('recommend') || lowerMsg.includes('suggestion') || lowerMsg.includes('popular')) {
+      // Get popular items based on ratings and orders
+      const popularItems = menuItems
         .filter(item => item.status === 'available')
         .sort((a, b) => (b.rating || 0) - (a.rating || 0))
         .slice(0, 3);
       
-      const suggestions = popularItems.map(item => item.name).join(', ');
-      return `Our most popular items are: ${suggestions}. Would you like to know more about any of these?`;
+      return {
+        id: Date.now().toString(),
+        role: 'assistant',
+        content: `Based on our most popular items, I recommend: ${popularItems.map(i => i.name).join(', ')}. Would you like to know more about any of these?`,
+        timestamp: new Date()
+      };
     }
     
-    // Check for menu inquiry
-    if (/\b(menu|food|items|dishes|offerings)\b/i.test(userMessage)) {
-      const categories = Array.from(new Set(menuItems.map(item => item.category)));
-      const categoryList = categories.map(c => c.replace('_', ' ')).join(', ');
+    // Check for vegetarian options
+    if (lowerMsg.includes('vegetarian') || lowerMsg.includes('veg')) {
+      const vegItems = menuItems
+        .filter(item => item.veg && item.status === 'available')
+        .sort((a, b) => (b.rating || 0) - (a.rating || 0))
+        .slice(0, 3);
       
-      return `Our menu includes various categories: ${categoryList}. You can browse the complete menu in the Menu section. Would you like me to recommend something specific?`;
+      return {
+        id: Date.now().toString(),
+        role: 'assistant',
+        content: `Here are some great vegetarian options: ${vegItems.map(i => i.name).join(', ')}. All of these are customer favorites!`,
+        timestamp: new Date()
+      };
     }
     
-    // Check for specific item inquiry
-    const matchedItems = findMatchingMenuItems(userMessage);
-    if (matchedItems.length > 0) {
-      const item = matchedItems[0];
-      return `${item.name} (₹${item.price}): ${item.description}. ${item.status === 'available' ? 'It\'s currently available to order.' : 'Sorry, this item is currently unavailable.'}`;
+    // Check for spicy food
+    if (lowerMsg.includes('spicy')) {
+      const spicyItems = menuItems
+        .filter(item => 
+          item.tags?.includes('spicy') && 
+          item.status === 'available'
+        )
+        .slice(0, 3);
+      
+      return {
+        id: Date.now().toString(),
+        role: 'assistant',
+        content: `If you enjoy spicy food, try these: ${spicyItems.map(i => i.name).join(', ')}. These are known for their vibrant flavors and heat!`,
+        timestamp: new Date()
+      };
     }
     
     // Default response
-    return "I'm not sure I understand. You can ask me about menu items, dietary options, or place an order. How can I assist you?";
-  };
-  
-  const handleSendMessage = async () => {
-    if (!message.trim()) return;
-    
-    // Add user message
-    const userMessage: ChatMessage = {
-      sender: 'user',
-      content: message,
+    return {
+      id: Date.now().toString(),
+      role: 'assistant',
+      content: 'I can help you find food items, make recommendations based on dietary preferences, or answer questions about our menu. Is there something specific you\'re looking for?',
       timestamp: new Date()
     };
+  };
+
+  // Helper function to find menu items mentioned in text
+  const findMenuItemsInText = (text: string): MenuItem[] => {
+    const foundItems: MenuItem[] = [];
     
-    setMessages(prev => [...prev, userMessage]);
-    setMessage('');
-    setIsTyping(true);
-    
-    // Check if this is an order intent
-    const orderItem = checkForOrderIntent(userMessage.content);
-    
-    // Simulate AI processing delay
-    setTimeout(() => {
-      let botResponse = generateResponse(userMessage.content);
-      
-      // If order intent detected and item is available
-      if (orderItem && orderItem.status === 'available') {
-        addToCart(orderItem, 1);
-        botResponse = `I've added ${orderItem.name} to your cart. Would you like to checkout now or add something else?`;
-        
-        // Navigate to cart after a short delay
-        setTimeout(() => {
-          navigate('/cart');
-        }, 1500);
+    menuItems.forEach(item => {
+      const itemNameLower = item.name.toLowerCase();
+      if (text.toLowerCase().includes(itemNameLower) && item.status === 'available') {
+        foundItems.push(item);
       }
-      
-      const botMessage: ChatMessage = {
-        sender: 'bot',
-        content: botResponse,
-        timestamp: new Date()
-      };
-      
-      setMessages(prev => [...prev, botMessage]);
-      setIsTyping(false);
-    }, 800);
+    });
+    
+    return foundItems;
   };
-  
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      handleSendMessage();
+
+  const renderWalletInfo = () => {
+    if (!user) {
+      return (
+        <div className="flex flex-col items-center justify-center h-40 text-center">
+          <p>Please login to view your wallet information.</p>
+        </div>
+      );
     }
+
+    const recentTransactions = orders
+      .filter(order => order.customerId === user.id)
+      .slice(0, 5);
+
+    return (
+      <div className="space-y-4">
+        <div className="flex flex-col items-center p-4 bg-blue-950 rounded-lg">
+          <h3 className="text-lg font-medium mb-1">Current Balance</h3>
+          <p className="text-3xl font-bold">₹{user.walletBalance.toFixed(2)}</p>
+        </div>
+        
+        <div>
+          <h3 className="text-lg font-medium mb-2">Recent Orders</h3>
+          {recentTransactions.length > 0 ? (
+            <div className="space-y-2">
+              {recentTransactions.map(tx => (
+                <div key={tx.id} className="flex justify-between items-center p-2 bg-blue-950/50 rounded-md">
+                  <div>
+                    <p className="font-medium">{tx.items.map(i => i.name).join(', ')}</p>
+                    <p className="text-xs text-gray-400">{new Date(tx.createdAt).toLocaleDateString()}</p>
+                  </div>
+                  <p className="font-medium">₹{tx.totalAmount.toFixed(2)}</p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-center text-gray-400 py-4">No recent transactions</p>
+          )}
+        </div>
+      </div>
+    );
   };
-  
+
+  if (!isOpen) return null;
+
   return (
-    <div className="fixed" style={{ left: `${position.x}px`, top: `${position.y}px`, zIndex: 1000 }}>
-      <div
-        ref={chatRef}
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
-        className={`${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
-      >
-        {isOpen ? (
-          <motion.div
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.8, opacity: 0 }}
-            className="bg-[#192244] border border-[#384374] rounded-lg shadow-lg w-80 sm:w-96 overflow-hidden"
-          >
-            <div className="p-3 bg-[#131b38] border-b border-[#384374] flex justify-between items-center">
-              <div className="flex items-center">
-                <Bot className="h-5 w-5 mr-2 text-blue-400" />
-                <h3 className="font-medium text-white">Smart Cafe Assistant</h3>
+    <Card className={`fixed transition-all duration-300 shadow-xl bg-[#0c1329] border-[#384374] text-white overflow-hidden ${
+      isMinimized 
+        ? 'w-64 h-12 bottom-4 right-4'
+        : 'w-80 h-[500px] bottom-4 right-4 md:w-96 md:h-[600px]'
+    }`}>
+      {isMinimized ? (
+        <div className="flex items-center justify-between p-3 cursor-pointer" onClick={onMaximize}>
+          <div className="flex items-center">
+            <Avatar className="h-6 w-6 mr-2">
+              <AvatarImage src="/ai-assistant.png" />
+              <AvatarFallback className="bg-gradient-to-r from-purple-600 to-blue-600 text-white text-xs">AI</AvatarFallback>
+            </Avatar>
+            <span className="font-medium">Smart Assistant</span>
+          </div>
+          <Maximize2 className="h-4 w-4 text-gray-400" />
+        </div>
+      ) : (
+        <>
+          <CardHeader className="p-3 flex flex-row items-center justify-between bg-blue-950 border-b border-[#384374]">
+            <div className="flex items-center">
+              <Avatar className="h-8 w-8 mr-2">
+                <AvatarImage src="/ai-assistant.png" />
+                <AvatarFallback className="bg-gradient-to-r from-purple-600 to-blue-600 text-white">AI</AvatarFallback>
+              </Avatar>
+              <div>
+                <h3 className="font-semibold">Smart Assistant</h3>
+                <p className="text-xs text-gray-400">Always here to help</p>
               </div>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                onClick={toggleChat}
-                className="h-8 w-8 hover:bg-[#212a4e] rounded-full"
-              >
-                <X className="h-4 w-4 text-gray-400" />
+            </div>
+            <div className="flex">
+              <Button variant="ghost" size="icon" onClick={onMinimize} className="h-8 w-8">
+                <Minimize2 className="h-4 w-4" />
+              </Button>
+              <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8">
+                <X className="h-4 w-4" />
               </Button>
             </div>
+          </CardHeader>
+          
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col h-[calc(100%-56px)]">
+            <TabsList className="grid grid-cols-2 bg-[#131b38] border-b border-[#384374] rounded-none">
+              <TabsTrigger value="chat" className="data-[state=active]:bg-[#0c1329]">Chat</TabsTrigger>
+              <TabsTrigger value="wallet" className="data-[state=active]:bg-[#0c1329]">Wallet</TabsTrigger>
+            </TabsList>
             
-            <div className="p-4 h-80 overflow-y-auto">
-              <AnimatePresence>
-                {messages.map((msg, index) => (
-                  <motion.div
-                    key={index}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.3 }}
-                    className={`mb-3 flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+            <TabsContent value="chat" className="flex-1 flex flex-col m-0 p-0 overflow-hidden">
+              <CardContent className="flex-1 overflow-y-auto py-4 px-3 space-y-4">
+                {messages.map((message) => (
+                  <div 
+                    key={message.id} 
+                    className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
                   >
-                    <div
-                      className={`max-w-[80%] p-3 rounded-lg ${
-                        msg.sender === 'user'
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-[#131b38] text-white'
+                    <div 
+                      className={`max-w-[80%] rounded-lg px-3 py-2 ${
+                        message.role === 'user' 
+                          ? 'bg-blue-600 text-white' 
+                          : 'bg-[#192244] border border-[#384374] text-white'
                       }`}
                     >
-                      <p className="text-sm">{msg.content}</p>
-                      <p className="text-xs mt-1 opacity-60">
-                        {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      <p>{message.content}</p>
+                      <p className="text-xs opacity-70 mt-1">
+                        {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </p>
                     </div>
-                  </motion.div>
+                  </div>
                 ))}
-                
-                {isTyping && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="mb-3 flex justify-start"
-                  >
-                    <div className="max-w-[80%] p-3 rounded-lg bg-[#131b38] text-white">
-                      <div className="flex items-center space-x-2">
-                        <div className="w-2 h-2 rounded-full bg-gray-400 animate-pulse"></div>
-                        <div className="w-2 h-2 rounded-full bg-gray-400 animate-pulse delay-150"></div>
-                        <div className="w-2 h-2 rounded-full bg-gray-400 animate-pulse delay-300"></div>
-                      </div>
-                    </div>
-                  </motion.div>
-                )}
                 <div ref={messagesEndRef} />
-              </AnimatePresence>
-            </div>
+              </CardContent>
+              
+              <CardFooter className="border-t border-[#384374] p-3">
+                <form 
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    handleSendMessage();
+                  }}
+                  className="flex w-full items-center space-x-2"
+                >
+                  <Input
+                    className="flex-1 bg-[#131b38] border-[#384374] text-white"
+                    placeholder="Type your message..."
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                  />
+                  <Button 
+                    type="submit" 
+                    size="icon" 
+                    className="bg-blue-600 hover:bg-blue-700"
+                  >
+                    <Send className="h-4 w-4" />
+                  </Button>
+                </form>
+              </CardFooter>
+            </TabsContent>
             
-            <div className="p-3 bg-[#131b38] border-t border-[#384374] flex items-center">
-              <Input
-                value={message}
-                onChange={handleMessageChange}
-                onKeyPress={handleKeyPress}
-                placeholder="Type a message..."
-                className="bg-[#192244] border-[#384374] text-white"
-              />
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                onClick={handleSendMessage}
-                className="ml-2 hover:bg-[#212a4e] text-blue-400"
-                disabled={isTyping || !message.trim()}
-              >
-                {isTyping ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
-              </Button>
-            </div>
-          </motion.div>
-        ) : (
-          <motion.button
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-            onClick={toggleChat}
-            className="w-14 h-14 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 text-white flex items-center justify-center shadow-lg"
-          >
-            <Bot className="h-6 w-6" />
-          </motion.button>
-        )}
-      </div>
-    </div>
+            <TabsContent value="wallet" className="flex-1 m-0 p-4 overflow-y-auto">
+              {renderWalletInfo()}
+            </TabsContent>
+          </Tabs>
+        </>
+      )}
+    </Card>
   );
 };

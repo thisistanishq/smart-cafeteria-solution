@@ -59,6 +59,7 @@ export interface Order {
   estimatedReadyTime?: string;
   specialInstructions?: string;
   razorpayPaymentId?: string;
+  orderNumber?: string; // Adding orderNumber for unique identification
 }
 
 export type OrderStatus = 'pending' | 'preparing' | 'ready' | 'completed' | 'cancelled' | 'confirmed';
@@ -96,9 +97,9 @@ export interface InventoryItem {
   unit: string;
   category: string;
   threshold: number;
-  thresholdLevel?: number;
+  thresholdLevel?: number; // For compatibility
   costPerUnit: number;
-  cost?: number;
+  cost?: number; // For compatibility
   supplier?: string;
   lastRestocked?: string;
 }
@@ -135,4 +136,22 @@ export interface SalesAnalytics {
     quantity: number;
     revenue: number;
   }[];
+}
+
+// ML-based recommendation model
+export interface MLRecommendation {
+  userId?: string;
+  itemId: string;
+  confidence: number;
+  reason: string;
+}
+
+// Machine Learning prediction model
+export interface MLPrediction {
+  type: 'sales' | 'inventory' | 'waste';
+  timestamp: string;
+  value: number;
+  confidence: number;
+  previousValue?: number;
+  trend?: 'up' | 'down' | 'stable';
 }
