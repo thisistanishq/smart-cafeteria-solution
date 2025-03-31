@@ -6,7 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AppProvider } from "@/context/AppContext";
 import { AnimatePresence } from "framer-motion";
-import { ChatBot } from "@/components/ChatBot";
+import { MovableChat } from "@/components/MovableChat";
 import { RoleBasedRoute } from "@/components/RoleBasedRoute";
 
 // Pages
@@ -26,6 +26,7 @@ import AdminDashboard from "./pages/Admin/Dashboard";
 import AdminLogin from "./pages/AdminLogin"; 
 import Scanner from "./pages/Scanner";
 import NotFound from "./pages/NotFound";
+import UserProfile from "./pages/UserProfile";
 
 // Install required dependencies
 import 'framer-motion';
@@ -76,6 +77,11 @@ const App = () => (
                   <Scanner />
                 </RoleBasedRoute>
               } />
+              <Route path="/profile" element={
+                <RoleBasedRoute allowedRoles={['student', 'staff', 'cafeteria_staff', 'admin']}>
+                  <UserProfile />
+                </RoleBasedRoute>
+              } />
               
               {/* Staff Routes */}
               <Route path="/staff/orders" element={
@@ -106,7 +112,7 @@ const App = () => (
               <Route path="*" element={<NotFound />} />
             </Routes>
           </AnimatePresence>
-          <ChatBot />
+          <MovableChat />
         </BrowserRouter>
       </TooltipProvider>
     </AppProvider>

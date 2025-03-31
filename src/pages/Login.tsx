@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowLeft, User, Lock, Coffee } from 'lucide-react';
@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Label } from '@/components/ui/label';
 import { useApp } from '@/context/AppContext';
 import { Loader } from '@/components/Loader';
-import { FoodVisualization } from '@/components/FoodVisualization';
+import { CookingAnimation } from '@/components/CookingAnimation';
 
 interface FormData {
   email: string;
@@ -26,7 +26,7 @@ const Login = () => {
   });
   
   const [errors, setErrors] = useState<Partial<FormData>>({});
-  const [showVisualizer, setShowVisualizer] = useState(false);
+  const [cookingAnimation, setCookingAnimation] = useState<'dosa' | 'idli' | 'biryani' | 'poori'>('dosa');
   
   // Animation variants
   const containerVariants = {
@@ -51,6 +51,19 @@ const Login = () => {
       }
     }
   };
+  
+  // Cycle through cooking animations
+  useEffect(() => {
+    const animations: Array<'dosa' | 'idli' | 'biryani' | 'poori'> = ['dosa', 'idli', 'biryani', 'poori'];
+    let currentIndex = 0;
+    
+    const intervalId = setInterval(() => {
+      currentIndex = (currentIndex + 1) % animations.length;
+      setCookingAnimation(animations[currentIndex]);
+    }, 5000);
+    
+    return () => clearInterval(intervalId);
+  }, []);
   
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -136,7 +149,7 @@ const Login = () => {
         <motion.div variants={itemVariants}>
           <Button 
             variant="ghost" 
-            className="mb-4 text-navy-500"
+            className="mb-4 text-navy-700"
             onClick={() => navigate('/')}
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
@@ -157,12 +170,12 @@ const Login = () => {
                     damping: 20,
                     delay: 0.3
                   }}
-                  className="w-16 h-16 bg-navy-500 rounded-full flex items-center justify-center"
+                  className="w-16 h-16 bg-navy-700 rounded-full flex items-center justify-center"
                 >
                   <Coffee className="h-8 w-8 text-white" />
                 </motion.div>
               </div>
-              <CardTitle className="text-2xl font-bold text-center text-navy-700">Welcome Back</CardTitle>
+              <CardTitle className="text-2xl font-bold text-center text-navy-800">Welcome Back</CardTitle>
               <CardDescription className="text-center">
                 Enter your credentials to access your account
               </CardDescription>
@@ -212,7 +225,7 @@ const Login = () => {
                   <motion.div variants={itemVariants}>
                     <Button 
                       type="submit" 
-                      className="w-full bg-navy-500 hover:bg-navy-600 text-white"
+                      className="w-full bg-navy-700 hover:bg-navy-800 text-white"
                     >
                       Sign In
                     </Button>
@@ -262,23 +275,13 @@ const Login = () => {
                     Admin Account
                   </Button>
                 </div>
-                
-                <div className="mt-6 text-center">
-                  <Button 
-                    variant="ghost" 
-                    className="text-navy-500" 
-                    onClick={() => setShowVisualizer(!showVisualizer)}
-                  >
-                    {showVisualizer ? "Hide 3D Visualizer" : "Show 3D Visualizer"}
-                  </Button>
-                </div>
               </motion.div>
             </CardContent>
             
             <CardFooter className="flex justify-center">
               <motion.p variants={itemVariants} className="text-sm text-muted-foreground">
                 Don't have an account?{' '}
-                <Link to="/register" className="text-navy-500 hover:underline">
+                <Link to="/register" className="text-navy-700 hover:underline">
                   Sign up
                 </Link>
               </motion.p>
@@ -287,27 +290,23 @@ const Login = () => {
         </motion.div>
       </div>
       
-      {/* 3D Food Visualization */}
+      {/* Cooking Animation Section */}
       <motion.div 
         variants={itemVariants}
         initial={{ opacity: 0, x: 50 }}
-        animate={{ 
-          opacity: showVisualizer ? 1 : 0, 
-          x: showVisualizer ? 0 : 50,
-          height: showVisualizer ? 'auto' : 0
-        }}
+        animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.5 }}
-        className="w-full max-w-md md:ml-8 mt-8 md:mt-0 order-1 md:order-2 overflow-hidden"
+        className="w-full max-w-md md:ml-8 mt-8 md:mt-0 order-1 md:order-2"
       >
-        {showVisualizer && (
-          <div className="bg-navy-900 rounded-xl overflow-hidden shadow-2xl">
-            <div className="p-4 bg-navy-800 text-white">
-              <h3 className="text-xl font-semibold">Smart Cafeteria Experience</h3>
-              <p className="text-navy-100 text-sm">Drag to rotate, scroll to zoom</p>
-            </div>
-            <FoodVisualization className="h-[400px]" />
+        <div className="bg-navy-900 rounded-xl overflow-hidden shadow-2xl">
+          <div className="p-4 bg-navy-800 text-white">
+            <h3 className="text-xl font-semibold">Smart Cafeteria Experience</h3>
+            <p className="text-navy-100 text-sm">Watch our chefs in action</p>
           </div>
-        )}
+          <div className="p-8 bg-navy-700">
+            <CookingAnimation type={cookingAnimation} className="h-[300px]" />
+          </div>
+        </div>
       </motion.div>
     </motion.div>
   );
