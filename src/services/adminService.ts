@@ -2,12 +2,12 @@
 import { supabase } from '@/integrations/supabase/client';
 
 // Admin Dashboard Services
-export const adminDashboardService = {
+export const adminService = {
   // Get AI recommendations from the database
   async getAIRecommendations() {
+    // Use a different approach since ai_recommendations is a view
     const { data, error } = await supabase
-      .from('ai_recommendations')
-      .select('*')
+      .rpc('generate_ai_recommendations')
       .order('priority', { ascending: true });
     
     return { data, error };
@@ -33,7 +33,7 @@ export const adminDashboardService = {
   },
   
   // Update user role (admin only)
-  async updateUserRole(userId: string, role: string) {
+  async updateUserRole(userId: string, role: "student" | "staff" | "cafeteria_staff" | "admin") {
     const { data, error } = await supabase
       .from('profiles')
       .update({ role })
@@ -75,9 +75,9 @@ export const adminDashboardService = {
   // Get waste reports
   async getWasteReports() {
     const { data, error } = await supabase
-      .from('waste_reports')
+      .from('analytics_daily')
       .select('*')
-      .order('day', { ascending: false })
+      .order('date', { ascending: false })
       .limit(10);
     
     return { data, error };
@@ -86,9 +86,9 @@ export const adminDashboardService = {
   // Get sales summary
   async getSalesSummary() {
     const { data, error } = await supabase
-      .from('sales_summary')
+      .from('analytics_daily')
       .select('*')
-      .order('day', { ascending: false })
+      .order('date', { ascending: false })
       .limit(7);
     
     return { data, error };

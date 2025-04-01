@@ -66,30 +66,50 @@ export const NavBar: React.FC = () => {
     navigate('/login');
   };
   
-  const navItems = [
-    { to: '/', label: 'Home', icon: <Home size={20} /> },
-    { to: '/menu', label: 'Menu', icon: <Utensils size={20} /> },
-    { to: '/orders', label: 'My Orders', icon: <ClipboardList size={20} /> },
-    { to: '/wallet', label: 'Wallet', icon: <Wallet size={20} /> },
-  ];
+  // Determine which nav items to show based on user role
+  const getNavItems = () => {
+    if (!isAuthenticated || !user) {
+      return [
+        { to: '/', label: 'Home', icon: <Home size={20} /> },
+        { to: '/menu', label: 'Menu', icon: <Utensils size={20} /> }
+      ];
+    }
+    
+    // Admin-specific navigation
+    if (user.role === 'admin') {
+      return [
+        { to: '/admin/dashboard', label: 'Dashboard', icon: <BarChart3 size={20} /> }
+      ];
+    }
+    
+    // Cafeteria staff navigation
+    if (user.role === 'cafeteria_staff') {
+      return [
+        { to: '/staff/orders', label: 'Manage Orders', icon: <ClipboardList size={20} /> },
+        { to: '/staff/billing', label: 'Billing System', icon: <Calculator size={20} /> },
+        { to: '/staff/menu', label: 'Menu Management', icon: <Utensils size={20} /> }
+      ];
+    }
+    
+    // Regular user navigation
+    return [
+      { to: '/', label: 'Home', icon: <Home size={20} /> },
+      { to: '/menu', label: 'Menu', icon: <Utensils size={20} /> },
+      { to: '/orders', label: 'My Orders', icon: <ClipboardList size={20} /> },
+      { to: '/wallet', label: 'Wallet', icon: <Wallet size={20} /> }
+    ];
+  };
   
-  // Add admin or staff specific routes
-  if (user?.role === 'admin') {
-    navItems.push(
-      { to: '/admin/dashboard', label: 'Admin Dashboard', icon: <BarChart3 size={20} /> }
-    );
-  } else if (user?.role === 'cafeteria_staff') {
-    navItems.push(
-      { to: '/staff/orders', label: 'Manage Orders', icon: <ClipboardList size={20} /> },
-      { to: '/staff/billing', label: 'Billing System', icon: <Calculator size={20} /> }
-    );
-  }
+  const navItems = getNavItems();
+  
+  // Determine if cart should be shown (not for admin)
+  const showCart = !user || user.role !== 'admin';
   
   return (
     <nav className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
       <div className="cafeteria-container flex items-center justify-between py-4">
         {/* Logo & Brand */}
-        <Link to="/" className="flex items-center gap-2">
+        <Link to={user?.role === 'admin' ? '/admin/dashboard' : '/'} className="flex items-center gap-2">
           <motion.div
             whileHover={{ rotate: [0, -10, 10, -10, 0] }}
             transition={{ duration: 0.5 }}
@@ -102,7 +122,7 @@ export const NavBar: React.FC = () => {
             whileHover={{ opacity: 0.8 }}
             transition={{ duration: 0.2 }}
           >
-            Smart Cafeteria
+            {user?.role === 'admin' ? 'Admin Dashboard' : 'Smart Cafeteria'}
           </motion.span>
         </Link>
         
@@ -125,28 +145,30 @@ export const NavBar: React.FC = () => {
         
         {/* Right side icons */}
         <div className="flex items-center gap-2">
-          {/* Cart button */}
-          <motion.div
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-          >
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="relative"
-              onClick={() => navigate('/cart')}
+          {/* Cart button - only show for non-admin users */}
+          {showCart && (
+            <motion.div
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
             >
-              <ShoppingCart className="h-5 w-5" />
-              {totalItems > 0 && (
-                <Badge 
-                  className="absolute -top-1 -right-1 px-1.5 bg-[#15187C] text-white" 
-                  variant="default"
-                >
-                  {totalItems}
-                </Badge>
-              )}
-            </Button>
-          </motion.div>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="relative"
+                onClick={() => navigate('/cart')}
+              >
+                <ShoppingCart className="h-5 w-5" />
+                {totalItems > 0 && (
+                  <Badge 
+                    className="absolute -top-1 -right-1 px-1.5 bg-[#15187C] text-white" 
+                    variant="default"
+                  >
+                    {totalItems}
+                  </Badge>
+                )}
+              </Button>
+            </motion.div>
+          )}
           
           {/* User dropdown */}
           {isAuthenticated ? (
@@ -177,43 +199,51 @@ export const NavBar: React.FC = () => {
                     {user?.role.replace('_', ' ')}
                   </Badge>
                 </DropdownMenuItem>
-                {user?.walletBalance !== undefined && (
+                {user?.walletBalance !== undefined && user.role !== 'admin' && (
                   <DropdownMenuItem className="flex justify-between">
                     <span>Wallet:</span> 
                     <Badge variant="outline">₹{user.walletBalance}</Badge>
                   </DropdownMenuItem>
                 )}
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => navigate('/profile')}>
-                  Profile
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate('/wallet')}>
-                  Wallet
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate('/orders')}>
-                  My Orders
-                </DropdownMenuItem>
-                {user?.role === 'admin' && (
+                
+                {/* Show different menu items based on role */}
+                {user?.role === 'admin' ? (
                   <>
-                    <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={() => navigate('/admin/dashboard')} className="text-[#15187C]">
-                      <Shield className="mr-2 h-4 w-4" />
-                      Admin Dashboard
+                      <BarChart3 className="mr-2 h-4 w-4" />
+                      Dashboard
                     </DropdownMenuItem>
                   </>
-                )}
-                {user?.role === 'cafeteria_staff' && (
+                ) : user?.role === 'cafeteria_staff' ? (
                   <>
-                    <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={() => navigate('/staff/orders')}>
+                      <ClipboardList className="mr-2 h-4 w-4" />
                       Manage Orders
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => navigate('/staff/billing')}>
                       <Calculator className="mr-2 h-4 w-4" />
                       Billing System
                     </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate('/staff/menu')}>
+                      <Utensils className="mr-2 h-4 w-4" />
+                      Menu Management
+                    </DropdownMenuItem>
+                  </>
+                ) : (
+                  <>
+                    <DropdownMenuItem onClick={() => navigate('/profile')}>
+                      Profile
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate('/wallet')}>
+                      Wallet
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate('/orders')}>
+                      My Orders
+                    </DropdownMenuItem>
                   </>
                 )}
+                
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleLogout} className="text-red-500">
                   <LogOut className="mr-2 h-4 w-4" />
@@ -252,12 +282,14 @@ export const NavBar: React.FC = () => {
               <div className="flex flex-col h-full p-4">
                 <div className="flex items-center justify-between mb-8 pb-4 border-b">
                   <Link 
-                    to="/" 
+                    to={user?.role === 'admin' ? '/admin/dashboard' : '/'} 
                     className="flex items-center gap-2"
                     onClick={() => setIsMenuOpen(false)}
                   >
                     <Utensils className="h-6 w-6 text-[#15187C]" />
-                    <span className="font-bold">Smart Cafeteria</span>
+                    <span className="font-bold">
+                      {user?.role === 'admin' ? 'Admin Dashboard' : 'Smart Cafeteria'}
+                    </span>
                   </Link>
                   <Button 
                     variant="ghost" 
