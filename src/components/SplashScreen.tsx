@@ -1,30 +1,17 @@
+
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Utensils, Coffee } from 'lucide-react';
-import { useApp } from '@/context/AppContext';
 
 export const SplashScreen: React.FC = () => {
   const [isVisible, setIsVisible] = useState(true);
-  const { user, isAuthenticated } = useApp();
-  const navigate = useNavigate();
   
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsVisible(false);
-      
-      // Redirect based on user role
-      if (isAuthenticated && user) {
-        if (user.role === 'cafeteria_staff') {
-          navigate('/staff/billing'); // Redirect cafeteria staff directly to billing
-        } else if (user.role === 'admin') {
-          navigate('/admin/dashboard'); // Redirect admin to dashboard
-        }
-        // Other roles go to home page (default)
-      }
-    }, 2000); // Reduced splash screen time
+    }, 3000);
     
     return () => clearTimeout(timer);
-  }, [isAuthenticated, user, navigate]);
+  }, []);
   
   if (!isVisible) return null;
   

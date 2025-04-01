@@ -10,10 +10,7 @@ import {
   Home,
   Utensils,
   ClipboardList,
-  Wallet,
-  Calculator,
-  BarChart3,
-  Shield
+  Wallet
 } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
 import { 
@@ -27,7 +24,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { motion } from 'framer-motion';
 
 interface NavItemProps {
   to: string;
@@ -39,7 +35,7 @@ interface NavItemProps {
 
 const NavItem: React.FC<NavItemProps> = ({ to, label, icon, onClick, isMobile = false }) => {
   const baseClasses = "flex items-center gap-2 transition-colors";
-  const desktopClasses = "px-4 py-2 hover:text-[#15187C]";
+  const desktopClasses = "px-4 py-2 hover:text-turmeric-500";
   const mobileClasses = "px-4 py-3 hover:bg-muted rounded-md text-lg";
   
   const classes = isMobile 
@@ -66,130 +62,80 @@ export const NavBar: React.FC = () => {
     navigate('/login');
   };
   
-  // Determine which nav items to show based on user role
-  const getNavItems = () => {
-    if (!isAuthenticated || !user) {
-      return [
-        { to: '/', label: 'Home', icon: <Home size={20} /> },
-        { to: '/menu', label: 'Menu', icon: <Utensils size={20} /> }
-      ];
-    }
-    
-    // Admin-specific navigation
-    if (user.role === 'admin') {
-      return [
-        { to: '/admin/dashboard', label: 'Dashboard', icon: <BarChart3 size={20} /> }
-      ];
-    }
-    
-    // Cafeteria staff navigation
-    if (user.role === 'cafeteria_staff') {
-      return [
-        { to: '/staff/orders', label: 'Manage Orders', icon: <ClipboardList size={20} /> },
-        { to: '/staff/billing', label: 'Billing System', icon: <Calculator size={20} /> },
-        { to: '/staff/menu', label: 'Menu Management', icon: <Utensils size={20} /> }
-      ];
-    }
-    
-    // Regular user navigation
-    return [
-      { to: '/', label: 'Home', icon: <Home size={20} /> },
-      { to: '/menu', label: 'Menu', icon: <Utensils size={20} /> },
-      { to: '/orders', label: 'My Orders', icon: <ClipboardList size={20} /> },
-      { to: '/wallet', label: 'Wallet', icon: <Wallet size={20} /> }
-    ];
-  };
+  const navItems = [
+    { to: '/', label: 'Home', icon: <Home size={20} /> },
+    { to: '/menu', label: 'Menu', icon: <Utensils size={20} /> },
+    { to: '/orders', label: 'My Orders', icon: <ClipboardList size={20} /> },
+    { to: '/wallet', label: 'Wallet', icon: <Wallet size={20} /> },
+  ];
   
-  const navItems = getNavItems();
-  
-  // Determine if cart should be shown (not for admin)
-  const showCart = !user || user.role !== 'admin';
+  // Add admin or staff specific routes
+  if (user?.role === 'admin') {
+    navItems.push(
+      { to: '/admin/dashboard', label: 'Admin Dashboard', icon: null }
+    );
+  } else if (user?.role === 'cafeteria_staff') {
+    navItems.push(
+      { to: '/staff/orders', label: 'Manage Orders', icon: null }
+    );
+  }
   
   return (
     <nav className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
       <div className="cafeteria-container flex items-center justify-between py-4">
         {/* Logo & Brand */}
-        <Link to={user?.role === 'admin' ? '/admin/dashboard' : '/'} className="flex items-center gap-2">
-          <motion.div
-            whileHover={{ rotate: [0, -10, 10, -10, 0] }}
-            transition={{ duration: 0.5 }}
-          >
-            <Utensils className="h-8 w-8 text-[#15187C]" />
-          </motion.div>
-          <motion.span 
-            className="font-bold text-xl"
-            initial={{ opacity: 1 }}
-            whileHover={{ opacity: 0.8 }}
-            transition={{ duration: 0.2 }}
-          >
-            {user?.role === 'admin' ? 'Admin Dashboard' : 'Smart Cafeteria'}
-          </motion.span>
+        <Link to="/" className="flex items-center gap-2">
+          <Utensils className="h-8 w-8 text-turmeric-600" />
+          <span className="font-bold text-xl">Smart Cafeteria</span>
         </Link>
         
         {/* Desktop Navigation */}
         <div className="hidden md:flex items-center space-x-2">
           {navItems.map((item) => (
-            <motion.div
-              key={item.to}
-              whileHover={{ y: -2 }}
-              transition={{ type: "spring", stiffness: 300, damping: 20 }}
-            >
-              <NavItem 
-                to={item.to} 
-                label={item.label} 
-                icon={item.icon} 
-              />
-            </motion.div>
+            <NavItem 
+              key={item.to} 
+              to={item.to} 
+              label={item.label} 
+              icon={item.icon} 
+            />
           ))}
         </div>
         
         {/* Right side icons */}
         <div className="flex items-center gap-2">
-          {/* Cart button - only show for non-admin users */}
-          {showCart && (
-            <motion.div
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-            >
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="relative"
-                onClick={() => navigate('/cart')}
+          {/* Cart button */}
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="relative"
+            onClick={() => navigate('/cart')}
+          >
+            <ShoppingCart className="h-5 w-5" />
+            {totalItems > 0 && (
+              <Badge 
+                className="absolute -top-1 -right-1 px-1.5 bg-turmeric-500 text-white" 
+                variant="default"
               >
-                <ShoppingCart className="h-5 w-5" />
-                {totalItems > 0 && (
-                  <Badge 
-                    className="absolute -top-1 -right-1 px-1.5 bg-[#15187C] text-white" 
-                    variant="default"
-                  >
-                    {totalItems}
-                  </Badge>
-                )}
-              </Button>
-            </motion.div>
-          )}
+                {totalItems}
+              </Badge>
+            )}
+          </Button>
           
           {/* User dropdown */}
           {isAuthenticated ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <motion.div
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
-                >
-                  <Button variant="ghost" size="icon" className="rounded-full">
-                    {user?.profileImageUrl ? (
-                      <img 
-                        src={user.profileImageUrl} 
-                        alt={user.name} 
-                        className="h-8 w-8 rounded-full object-cover"
-                      />
-                    ) : (
-                      <User className="h-5 w-5" />
-                    )}
-                  </Button>
-                </motion.div>
+                <Button variant="ghost" size="icon" className="rounded-full">
+                  {user?.profileImageUrl ? (
+                    <img 
+                      src={user.profileImageUrl} 
+                      alt={user.name} 
+                      className="h-8 w-8 rounded-full object-cover"
+                    />
+                  ) : (
+                    <User className="h-5 w-5" />
+                  )}
+                </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuLabel>My Account</DropdownMenuLabel>
@@ -199,51 +145,22 @@ export const NavBar: React.FC = () => {
                     {user?.role.replace('_', ' ')}
                   </Badge>
                 </DropdownMenuItem>
-                {user?.walletBalance !== undefined && user.role !== 'admin' && (
+                {user?.walletBalance !== undefined && (
                   <DropdownMenuItem className="flex justify-between">
                     <span>Wallet:</span> 
                     <Badge variant="outline">₹{user.walletBalance}</Badge>
                   </DropdownMenuItem>
                 )}
                 <DropdownMenuSeparator />
-                
-                {/* Show different menu items based on role */}
-                {user?.role === 'admin' ? (
-                  <>
-                    <DropdownMenuItem onClick={() => navigate('/admin/dashboard')} className="text-[#15187C]">
-                      <BarChart3 className="mr-2 h-4 w-4" />
-                      Dashboard
-                    </DropdownMenuItem>
-                  </>
-                ) : user?.role === 'cafeteria_staff' ? (
-                  <>
-                    <DropdownMenuItem onClick={() => navigate('/staff/orders')}>
-                      <ClipboardList className="mr-2 h-4 w-4" />
-                      Manage Orders
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => navigate('/staff/billing')}>
-                      <Calculator className="mr-2 h-4 w-4" />
-                      Billing System
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => navigate('/staff/menu')}>
-                      <Utensils className="mr-2 h-4 w-4" />
-                      Menu Management
-                    </DropdownMenuItem>
-                  </>
-                ) : (
-                  <>
-                    <DropdownMenuItem onClick={() => navigate('/profile')}>
-                      Profile
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => navigate('/wallet')}>
-                      Wallet
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => navigate('/orders')}>
-                      My Orders
-                    </DropdownMenuItem>
-                  </>
-                )}
-                
+                <DropdownMenuItem onClick={() => navigate('/profile')}>
+                  Profile
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate('/wallet')}>
+                  Wallet
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate('/orders')}>
+                  My Orders
+                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleLogout} className="text-red-500">
                   <LogOut className="mr-2 h-4 w-4" />
@@ -252,44 +169,28 @@ export const NavBar: React.FC = () => {
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
-            <motion.div
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <Button 
-                variant="default" 
-                onClick={() => navigate('/login')}
-                className="bg-[#15187C] hover:bg-[#0e105a]"
-              >
-                Login
-              </Button>
-            </motion.div>
+            <Button variant="default" onClick={() => navigate('/login')}>
+              Login
+            </Button>
           )}
           
           {/* Mobile menu button */}
           <Sheet open={isMenuOpen} onOpenChange={setIsMenuOpen}>
             <SheetTrigger asChild>
-              <motion.div
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
-              >
-                <Button variant="ghost" size="icon" className="md:hidden">
-                  <Menu className="h-5 w-5" />
-                </Button>
-              </motion.div>
+              <Button variant="ghost" size="icon" className="md:hidden">
+                <Menu className="h-5 w-5" />
+              </Button>
             </SheetTrigger>
             <SheetContent side="right" className="w-[250px] p-0">
               <div className="flex flex-col h-full p-4">
                 <div className="flex items-center justify-between mb-8 pb-4 border-b">
                   <Link 
-                    to={user?.role === 'admin' ? '/admin/dashboard' : '/'} 
+                    to="/" 
                     className="flex items-center gap-2"
                     onClick={() => setIsMenuOpen(false)}
                   >
-                    <Utensils className="h-6 w-6 text-[#15187C]" />
-                    <span className="font-bold">
-                      {user?.role === 'admin' ? 'Admin Dashboard' : 'Smart Cafeteria'}
-                    </span>
+                    <Utensils className="h-6 w-6 text-turmeric-600" />
+                    <span className="font-bold">Smart Cafeteria</span>
                   </Link>
                   <Button 
                     variant="ghost" 
@@ -351,7 +252,6 @@ export const NavBar: React.FC = () => {
                           navigate('/login');
                           setIsMenuOpen(false);
                         }}
-                        className="bg-[#15187C] hover:bg-[#0e105a]"
                       >
                         Login
                       </Button>
