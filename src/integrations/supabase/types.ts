@@ -343,7 +343,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      add_cafeteria_staff: {
+        Args: {
+          staff_name: string
+          staff_email: string
+          staff_password: string
+        }
+        Returns: string
+      }
     }
     Enums: {
       item_status: "available" | "unavailable" | "low_stock"
