@@ -6,7 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AppProvider } from "@/context/AppContext";
 import { AnimatePresence } from "framer-motion";
-import { ChatBot } from "@/components/ChatBot";
+import { SmartChatBot } from "@/components/SmartChatBot";
 import { RoleBasedRoute } from "@/components/RoleBasedRoute";
 
 // Pages
@@ -106,7 +106,7 @@ const App = () => (
               <Route path="*" element={<NotFound />} />
             </Routes>
           </AnimatePresence>
-          <ChatBot />
+          <SmartChatBot />
         </BrowserRouter>
       </TooltipProvider>
     </AppProvider>

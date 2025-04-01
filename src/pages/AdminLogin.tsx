@@ -107,7 +107,7 @@ const AdminLogin: React.FC = () => {
   };
   
   return (
-    <div className="min-h-screen flex items-center justify-center bg-navy-50 px-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-zinc-900 to-zinc-800 px-4">
       <motion.div
         initial="hidden"
         animate="visible"
@@ -115,7 +115,7 @@ const AdminLogin: React.FC = () => {
         className="w-full max-w-md"
       >
         <motion.div variants={itemVariants}>
-          <Card className="border-2 border-navy-500/10 shadow-lg">
+          <Card className="border-zinc-700 bg-zinc-800 shadow-lg">
             <CardHeader className="space-y-2 text-center">
               <div className="flex justify-center mb-2">
                 <motion.div
@@ -127,21 +127,21 @@ const AdminLogin: React.FC = () => {
                     damping: 10,
                     delay: 0.3
                   }}
-                  className="w-16 h-16 bg-navy-500 rounded-full flex items-center justify-center text-white"
+                  className="w-16 h-16 bg-gradient-to-br from-red-500 to-purple-600 rounded-full flex items-center justify-center text-white"
                 >
                   <Shield className="h-8 w-8" />
                 </motion.div>
               </div>
-              <CardTitle className="text-2xl font-bold text-navy-500">Admin Login</CardTitle>
-              <CardDescription>
+              <CardTitle className="text-2xl font-bold text-white">Admin Login</CardTitle>
+              <CardDescription className="text-zinc-400">
                 Please enter your credentials to access the admin dashboard
               </CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleLogin} className="space-y-4">
                 <motion.div variants={itemVariants} className="space-y-2">
-                  <div className="flex items-center space-x-2 text-sm text-gray-600 mb-1">
-                    <User className="h-4 w-4 text-navy-500" />
+                  <div className="flex items-center space-x-2 text-sm text-zinc-400 mb-1">
+                    <User className="h-4 w-4 text-zinc-300" />
                     <span>Email Address</span>
                   </div>
                   <div className="relative">
@@ -151,14 +151,14 @@ const AdminLogin: React.FC = () => {
                       required
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className="pl-3 border-navy-500/20 focus-visible:ring-navy-500/50"
+                      className="pl-3 bg-zinc-700 border-zinc-600 text-white focus-visible:ring-purple-500/50"
                     />
                   </div>
                 </motion.div>
                 
                 <motion.div variants={itemVariants} className="space-y-2">
-                  <div className="flex items-center space-x-2 text-sm text-gray-600 mb-1">
-                    <KeyRound className="h-4 w-4 text-navy-500" />
+                  <div className="flex items-center space-x-2 text-sm text-zinc-400 mb-1">
+                    <KeyRound className="h-4 w-4 text-zinc-300" />
                     <span>Password</span>
                   </div>
                   <div className="relative">
@@ -168,7 +168,7 @@ const AdminLogin: React.FC = () => {
                       required
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="pl-3 border-navy-500/20 focus-visible:ring-navy-500/50"
+                      className="pl-3 bg-zinc-700 border-zinc-600 text-white focus-visible:ring-purple-500/50"
                     />
                   </div>
                 </motion.div>
@@ -176,7 +176,7 @@ const AdminLogin: React.FC = () => {
                 <motion.div variants={itemVariants}>
                   <Button
                     type="submit"
-                    className="w-full bg-navy-500 hover:bg-navy-600 text-white"
+                    className="w-full bg-gradient-to-r from-red-500 to-purple-600 hover:from-red-600 hover:to-purple-700 text-white"
                     disabled={isLoading}
                   >
                     {isLoading ? (
@@ -194,8 +194,8 @@ const AdminLogin: React.FC = () => {
                 </motion.div>
                 
                 <motion.div variants={itemVariants}>
-                  <div className="p-3 bg-amber-50 text-amber-700 rounded-md flex items-start space-x-2">
-                    <AlertTriangle className="h-5 w-5 flex-shrink-0 mt-0.5" />
+                  <div className="p-3 bg-red-900/30 text-red-300 rounded-md flex items-start space-x-2 border border-red-900/50">
+                    <AlertTriangle className="h-5 w-5 flex-shrink-0 mt-0.5 text-red-400" />
                     <div className="text-sm">
                       <p className="font-semibold">Admin Area Only</p>
                       <p>This login is strictly for cafeteria administrators. Regular users and staff should use the standard login.</p>
@@ -204,10 +204,10 @@ const AdminLogin: React.FC = () => {
                 </motion.div>
               </form>
             </CardContent>
-            <CardFooter className="border-t border-gray-100 flex justify-center">
+            <CardFooter className="border-t border-zinc-700 flex justify-center">
               <motion.p 
                 variants={itemVariants}
-                className="text-center text-xs text-gray-500 mt-2"
+                className="text-center text-xs text-zinc-400 mt-2"
               >
                 <Lock className="h-3 w-3 inline-block mr-1" />
                 Secure admin-only access panel
@@ -223,7 +223,7 @@ const AdminLogin: React.FC = () => {
           <Button 
             variant="ghost" 
             onClick={() => navigate('/')}
-            className="text-navy-500"
+            className="text-zinc-400 hover:text-white"
           >
             Back to Main Site
           </Button>
