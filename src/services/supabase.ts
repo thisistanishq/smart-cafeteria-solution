@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import type { User, MenuItem, Order, OrderItem, InventoryItem, Transaction } from '@/types';
 
@@ -479,3 +478,6 @@ export const adminService = {
     return { data, error };
   }
 };
+
+// Export the new admin dashboard service
+export { adminService } from './adminService';

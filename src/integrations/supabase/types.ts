@@ -42,6 +42,53 @@ export type Database = {
         }
         Relationships: []
       }
+      bills: {
+        Row: {
+          bill_number: string
+          created_at: string | null
+          created_by: string | null
+          id: string
+          order_id: string | null
+          payment_method: Database["public"]["Enums"]["payment_method"]
+          payment_status: Database["public"]["Enums"]["payment_status"]
+          service_charge: number | null
+          tax_amount: number | null
+          total_amount: number
+        }
+        Insert: {
+          bill_number: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          order_id?: string | null
+          payment_method: Database["public"]["Enums"]["payment_method"]
+          payment_status?: Database["public"]["Enums"]["payment_status"]
+          service_charge?: number | null
+          tax_amount?: number | null
+          total_amount: number
+        }
+        Update: {
+          bill_number?: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          order_id?: string | null
+          payment_method?: Database["public"]["Enums"]["payment_method"]
+          payment_status?: Database["public"]["Enums"]["payment_status"]
+          service_charge?: number | null
+          tax_amount?: number | null
+          total_amount?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bills_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       inventory: {
         Row: {
           category: string
@@ -51,6 +98,7 @@ export type Database = {
           last_restocked: string
           name: string
           quantity: number
+          status: Database["public"]["Enums"]["inventory_status"] | null
           supplier: string | null
           threshold: number
           unit: string
@@ -64,6 +112,7 @@ export type Database = {
           last_restocked?: string
           name: string
           quantity?: number
+          status?: Database["public"]["Enums"]["inventory_status"] | null
           supplier?: string | null
           threshold?: number
           unit: string
@@ -77,6 +126,7 @@ export type Database = {
           last_restocked?: string
           name?: string
           quantity?: number
+          status?: Database["public"]["Enums"]["inventory_status"] | null
           supplier?: string | null
           threshold?: number
           unit?: string
@@ -84,8 +134,51 @@ export type Database = {
         }
         Relationships: []
       }
+      menu_ingredients: {
+        Row: {
+          created_at: string | null
+          id: string
+          inventory_id: string | null
+          menu_item_id: string | null
+          quantity: number
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          inventory_id?: string | null
+          menu_item_id?: string | null
+          quantity: number
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          inventory_id?: string | null
+          menu_item_id?: string | null
+          quantity?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "menu_ingredients_inventory_id_fkey"
+            columns: ["inventory_id"]
+            isOneToOne: false
+            referencedRelation: "inventory"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "menu_ingredients_menu_item_id_fkey"
+            columns: ["menu_item_id"]
+            isOneToOne: false
+            referencedRelation: "menu_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       menu_items: {
         Row: {
+          ai_tags: Json | null
           best_seller: boolean | null
           calories: number | null
           category: Database["public"]["Enums"]["menu_category"]
@@ -103,6 +196,7 @@ export type Database = {
           vegetarian: boolean | null
         }
         Insert: {
+          ai_tags?: Json | null
           best_seller?: boolean | null
           calories?: number | null
           category: Database["public"]["Enums"]["menu_category"]
@@ -120,6 +214,7 @@ export type Database = {
           vegetarian?: boolean | null
         }
         Update: {
+          ai_tags?: Json | null
           best_seller?: boolean | null
           calories?: number | null
           category?: Database["public"]["Enums"]["menu_category"]
@@ -197,8 +292,10 @@ export type Database = {
           order_number: string
           payment_method: Database["public"]["Enums"]["payment_method"]
           payment_status: Database["public"]["Enums"]["payment_status"]
+          service_charge: number | null
           special_instructions: string | null
           status: Database["public"]["Enums"]["order_status"]
+          tax_amount: number | null
           total_amount: number
         }
         Insert: {
@@ -211,8 +308,10 @@ export type Database = {
           order_number: string
           payment_method: Database["public"]["Enums"]["payment_method"]
           payment_status?: Database["public"]["Enums"]["payment_status"]
+          service_charge?: number | null
           special_instructions?: string | null
           status?: Database["public"]["Enums"]["order_status"]
+          tax_amount?: number | null
           total_amount: number
         }
         Update: {
@@ -225,8 +324,10 @@ export type Database = {
           order_number?: string
           payment_method?: Database["public"]["Enums"]["payment_method"]
           payment_status?: Database["public"]["Enums"]["payment_status"]
+          service_charge?: number | null
           special_instructions?: string | null
           status?: Database["public"]["Enums"]["order_status"]
+          tax_amount?: number | null
           total_amount?: number
         }
         Relationships: []
@@ -261,6 +362,30 @@ export type Database = {
           role?: Database["public"]["Enums"]["user_role"]
           updated_at?: string
           wallet_balance?: number
+        }
+        Relationships: []
+      }
+      settings: {
+        Row: {
+          id: string
+          key: string
+          updated_at: string | null
+          updated_by: string | null
+          value: Json
+        }
+        Insert: {
+          id?: string
+          key: string
+          updated_at?: string | null
+          updated_by?: string | null
+          value: Json
+        }
+        Update: {
+          id?: string
+          key?: string
+          updated_at?: string | null
+          updated_by?: string | null
+          value?: Json
         }
         Relationships: []
       }
@@ -340,7 +465,23 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      sales_summary: {
+        Row: {
+          day: string | null
+          item_counts: Json | null
+          total_orders: number | null
+          total_revenue: number | null
+        }
+        Relationships: []
+      }
+      waste_reports: {
+        Row: {
+          day: string | null
+          items: Json | null
+          total_cost: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       add_cafeteria_staff: {
@@ -353,6 +494,7 @@ export type Database = {
       }
     }
     Enums: {
+      inventory_status: "sufficient" | "low" | "very_low" | "out_of_stock"
       item_status: "available" | "unavailable" | "low_stock"
       menu_category:
         | "breakfast"

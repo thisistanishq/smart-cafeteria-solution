@@ -31,9 +31,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { NavBar } from '@/components/NavBar';
 import { useApp } from '@/context/AppContext';
-import { inventoryService, profileService, orderService, aiService } from '@/services/supabase';
+import { inventoryService, profileService, orderService, aiService, adminDashboardService } from '@/services/supabase';
 import { InventoryItem } from '@/types';
 import { motion } from 'framer-motion';
+import { AdminUserManagement } from '@/components/AdminUserManagement';
 
 // 3D visualization with Three.js
 import { Canvas } from '@react-three/fiber';
@@ -555,10 +556,11 @@ const AdminDashboard = () => {
           
           {/* Main Tabs Section */}
           <Tabs defaultValue="sales" className="w-full">
-            <TabsList className="grid grid-cols-4 mb-6">
+            <TabsList className="grid grid-cols-5 mb-6">
               <TabsTrigger value="sales">Sales Analytics</TabsTrigger>
               <TabsTrigger value="inventory">Inventory</TabsTrigger>
               <TabsTrigger value="customers">Customers</TabsTrigger>
+              <TabsTrigger value="users">User Management</TabsTrigger>
               <TabsTrigger value="3d">3D Visualization</TabsTrigger>
             </TabsList>
             
@@ -758,6 +760,10 @@ const AdminDashboard = () => {
                   </div>
                 </CardContent>
               </Card>
+            </TabsContent>
+            
+            <TabsContent value="users" className="space-y-6">
+              <AdminUserManagement />
             </TabsContent>
             
             <TabsContent value="3d" className="space-y-6">
