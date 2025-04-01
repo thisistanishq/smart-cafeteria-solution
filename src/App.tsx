@@ -3,11 +3,12 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AppProvider } from "@/context/AppContext";
 import { AnimatePresence } from "framer-motion";
 import { SmartChatBot } from "@/components/SmartChatBot";
 import { RoleBasedRoute } from "@/components/RoleBasedRoute";
+import { SplashScreen } from "@/components/SplashScreen";
 
 // Pages
 import HomePage from "./pages/HomePage";
@@ -41,6 +42,7 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
+          <SplashScreen />
           <AnimatePresence mode="wait">
             <Routes>
               {/* Public Routes */}
@@ -77,7 +79,12 @@ const App = () => (
                 </RoleBasedRoute>
               } />
               
-              {/* Staff Routes */}
+              {/* Staff Routes - with direct access */}
+              <Route path="/staff" element={
+                <RoleBasedRoute allowedRoles={['cafeteria_staff', 'admin']}>
+                  <Navigate to="/staff/billing" replace />
+                </RoleBasedRoute>
+              } />
               <Route path="/staff/orders" element={
                 <RoleBasedRoute allowedRoles={['cafeteria_staff', 'admin']}>
                   <StaffOrders />
@@ -95,6 +102,11 @@ const App = () => (
               } />
               
               {/* Admin Routes */}
+              <Route path="/admin" element={
+                <RoleBasedRoute allowedRoles={['admin']}>
+                  <Navigate to="/admin/dashboard" replace />
+                </RoleBasedRoute>
+              } />
               <Route path="/admin/login" element={<AdminLogin />} />
               <Route path="/admin/dashboard" element={
                 <RoleBasedRoute allowedRoles={['admin']}>

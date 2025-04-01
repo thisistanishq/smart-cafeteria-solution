@@ -114,10 +114,17 @@ export const menuService = {
 
   // Get all categories
   async getAllCategories() {
-    const { data, error } = await supabase
-      .from('categories')
-      .select('*');
-    return { data, error };
+    // Fix: Use a custom function or hardcoded categories instead of directly querying
+    // Since there's no categories table, we'll return predefined categories
+    const categories = [
+      'breakfast',
+      'lunch',
+      'dinner',
+      'snacks',
+      'beverages',
+      'desserts'
+    ];
+    return { data: categories, error: null };
   }
 };
 
@@ -182,9 +189,13 @@ export const orderService = {
 
   // Update order status
   async updateOrderStatus(orderId: string, status: string, additionalData = {}) {
+    // Fix: Use proper type casting for the status
     const { data, error } = await supabase
       .from('orders')
-      .update({ status, ...additionalData })
+      .update({ 
+        status: status as any, 
+        ...additionalData 
+      })
       .eq('id', orderId);
     return { data, error };
   }
@@ -367,6 +378,104 @@ export const razorpayService = {
     const { data, error } = await supabase.functions.invoke('verify-razorpay-payment', {
       body: { paymentId, orderId, signature }
     });
+    return { data, error };
+  }
+};
+
+// New Staff Management service
+export const staffService = {
+  // Add a new cafeteria staff member (admin only)
+  async addCafeteriaStaff(name: string, email: string, password: string) {
+    const { data, error } = await supabase.functions.invoke('add-cafeteria-staff', {
+      body: { 
+        name, 
+        email, 
+        password 
+      }
+    });
+    return { data, error };
+  },
+  
+  // Get all cafeteria staff (admin only)
+  async getAllStaff() {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('role', 'cafeteria_staff');
+    return { data, error };
+  }
+};
+
+// New Admin Dashboard service
+export const adminService = {
+  // Get daily analytics
+  async getDailyAnalytics(date?: string) {
+    const today = date || new Date().toISOString().split('T')[0];
+    
+    const { data, error } = await supabase
+      .from('analytics_daily')
+      .select('*')
+      .eq('date', today)
+      .single();
+    
+    return { data, error };
+  },
+  
+  // Get waste tracking data
+  async getWasteData(fromDate?: string, toDate?: string) {
+    let query = supabase
+      .from('waste_tracking')
+      .select('*')
+      .order('recorded_at', { ascending: false });
+    
+    if (fromDate) {
+      query = query.gte('recorded_at', fromDate);
+    }
+    
+    if (toDate) {
+      query = query.lte('recorded_at', toDate);
+    }
+    
+    const { data, error } = await query;
+    return { data, error };
+  },
+  
+  // Track food waste
+  async trackWaste(wasteData: {
+    item_name: string;
+    quantity: number;
+    cost: number;
+    reason: string;
+    item_id?: string;
+  }) {
+    const { data, error } = await supabase
+      .from('waste_tracking')
+      .insert([wasteData])
+      .select();
+    
+    return { data, error };
+  },
+  
+  // Get low stock alerts
+  async getLowStockAlerts() {
+    const { data, error } = await supabase
+      .from('inventory')
+      .select('*')
+      .lte('quantity', supabase.raw('threshold'))
+      .order('quantity', { ascending: true });
+    
+    return { data, error };
+  },
+  
+  // Get sales by date range
+  async getSalesByDateRange(fromDate: string, toDate: string) {
+    const { data, error } = await supabase
+      .from('analytics_daily')
+      .select('*')
+      .gte('date', fromDate)
+      .lte('date', toDate)
+      .order('date', { ascending: false });
+    
     return { data, error };
   }
 };

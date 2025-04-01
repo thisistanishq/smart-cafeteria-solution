@@ -12,88 +12,90 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
-  
+
   try {
-    // Create Supabase client with admin privileges
-    const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    // Get the request body
+    const { name, email, password } = await req.json();
     
-    // Get the authorization header
+    // Validate inputs
+    if (!name || !email || !password) {
+      return new Response(
+        JSON.stringify({ error: 'Name, email, and password are required' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    // Create a Supabase client with the Admin key
+    const supabaseAdmin = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+        },
+      }
+    );
+    
+    // Get the authorization header from the request
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      throw new Error('Missing Authorization header');
+      return new Response(
+        JSON.stringify({ error: 'Not authorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
     
-    // Verify the requesting user is an admin
+    // Get the user's token
     const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
     
-    if (authError || !user) {
-      throw new Error('Invalid authorization');
+    // Verify the token and get the user
+    const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token);
+    
+    if (userError || !user) {
+      return new Response(
+        JSON.stringify({ error: 'Not authorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
     
-    // Check if user is an admin
-    const { data: adminData, error: adminError } = await supabase
+    // Check if the user is an admin
+    const { data: profile, error: profileError } = await supabaseAdmin
       .from('profiles')
       .select('role')
       .eq('id', user.id)
       .single();
-      
-    if (adminError || adminData.role !== 'admin') {
-      throw new Error('Only administrators can add cafeteria staff');
+    
+    if (profileError || !profile || profile.role !== 'admin') {
+      return new Response(
+        JSON.stringify({ error: 'Only administrators can add cafeteria staff' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
     
-    // Get request body
-    const { name, email, password, role } = await req.json();
-    
-    if (!name || !email || !password) {
-      throw new Error('Missing required fields');
-    }
-    
-    if (role !== 'cafeteria_staff' && role !== 'admin') {
-      throw new Error('Invalid role specified');
-    }
-    
-    // Create the new user
-    const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true,
-      user_metadata: { name, role },
-    });
-    
-    if (createError) {
-      throw createError;
-    }
-    
-    // Don't need to manually insert to profiles table since we have a trigger
-    // that automatically creates a profile when a user is created
-    
-    // Return the new user data (without sensitive info)
-    return new Response(
-      JSON.stringify({ 
-        id: newUser.user.id,
-        email: newUser.user.email,
-        name: name,
-        role: role,
-        message: `${role === 'admin' ? 'Admin' : 'Cafeteria staff'} user created successfully` 
-      }),
-      { 
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 200 
-      }
+    // Call the RPC function to add cafeteria staff
+    const { data, error } = await supabaseAdmin.rpc(
+      'add_cafeteria_staff',
+      { staff_name: name, staff_email: email, staff_password: password }
     );
     
-  } catch (error) {
-    console.error("Error creating cafeteria staff:", error);
+    if (error) {
+      console.error('Error adding cafeteria staff:', error);
+      return new Response(
+        JSON.stringify({ error: error.message }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
     
     return new Response(
-      JSON.stringify({ error: error.message || "Failed to create cafeteria staff" }),
-      { 
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 400 
-      }
+      JSON.stringify({ data: { id: data, message: 'Cafeteria staff added successfully' } }),
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  } catch (error) {
+    console.error('Unexpected error:', error);
+    return new Response(
+      JSON.stringify({ error: 'Internal server error' }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });
