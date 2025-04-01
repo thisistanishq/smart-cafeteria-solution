@@ -1,11 +1,10 @@
-
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { 
   Facebook, 
   Twitter, 
   Instagram, 
-  GitHub, 
+  Github, 
   Mail, 
   Phone, 
   MapPin 
@@ -34,7 +33,7 @@ export const Footer: React.FC = () => {
                 <Instagram size={20} />
               </a>
               <a href="#" className="text-gray-300 hover:text-turmeric-400 transition-colors">
-                <GitHub size={20} />
+                <Github size={20} />
               </a>
             </div>
           </div>

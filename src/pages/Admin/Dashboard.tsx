@@ -2,8 +2,8 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
-  AreaChart, 
-  BarChart, 
+  AreaChart as AreaChartIcon, 
+  BarChart as BarChartIcon, 
   DollarSign, 
   ShoppingBag, 
   Users, 
@@ -16,7 +16,7 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
-  BarChart as RechartsBarChart,
+  BarChart,
   Bar,
   XAxis,
   YAxis,
@@ -180,7 +180,7 @@ const AdminDashboard = () => {
               <CardContent>
                 <div className="h-80">
                   <ResponsiveContainer width="100%" height="100%">
-                    <RechartsBarChart data={salesData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                    <BarChart data={salesData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
                       <XAxis dataKey="name" />
                       <YAxis />
                       <Tooltip 
@@ -188,7 +188,7 @@ const AdminDashboard = () => {
                         labelFormatter={(label) => `${label}`}
                       />
                       <Bar dataKey="value" fill="#eab308" radius={[4, 4, 0, 0]} />
-                    </RechartsBarChart>
+                    </BarChart>
                   </ResponsiveContainer>
                 </div>
               </CardContent>
